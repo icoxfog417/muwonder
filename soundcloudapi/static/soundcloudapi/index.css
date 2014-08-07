@@ -1,0 +1,255 @@
+* {
+    -webkit-box-sizing: border-box;
+    -moz-box-sizing: border-box;
+    box-sizing: border-box;
+}
+
+/*
+ * -- BASE STYLES --
+ * Most of these are inherited from Base, but I want to change a few.
+ */
+html, button, input, select, textarea,
+.pure-g [class *= "pure-u"] {
+    /* Set your content font stack here: */
+    font-family:"Hiragino Kaku Gothic ProN", Meiryo, sans-serif;
+}
+
+.pure-g{
+    letter-spacing:0em;
+}
+
+#content {
+    padding-top:90px;
+}
+
+#footer {
+    display:none;
+}
+
+#footer div{
+    padding-left:3px;
+    padding-right:3px;
+}
+
+#footer .pure-button{
+    text-align:center;
+    /* background-color:rgb(240, 55, 0); */
+    background-color:gray;
+    color:white;
+    width:100%;
+}
+
+.bx-next, .bx-prev{
+    color:white;
+    text-decoration:none;
+    width:100%;
+    display:block;
+    height:100%;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+label {
+    color: #34495e;
+}
+
+.pure-img-responsive {
+    max-width: 100%;
+    height: auto;
+}
+
+.track{
+    height:120px;
+    font-size:9px;
+    padding-left:15px;
+    padding-right:15px;
+    border-radius:5px;
+    overflow:auto;
+}
+
+.track a{
+    color:gray;
+    text-decoration:none;
+}
+
+.bx-wrapper {
+    margin: 0 auto 15px;
+}
+
+.bx-wrapper .bx-viewport{
+    left:0px;
+}
+
+#tracks-pager {
+    text-align:center;
+}
+
+#tracks-pager a {
+    text-decoration:none;
+    color:white;
+}
+
+#tracks-pager a.active img {
+    border:1px solid lightslategray;
+    border-radius:3px;
+    width : 30px;
+    height: 30px;
+}
+
+#tracks-pager img {
+    width : 25px;
+    height: 25px;
+    transition: opacity .2s ease-out;
+}
+
+.choice {
+    border-radius: 50%;
+    behavior: url(PIE.htc); /* remove if you don't care about IE8 */
+    width:75px;
+    height:75px;
+    text-align:center;
+    line-height:75px;
+    color:white;
+    margin-left:auto;
+    margin-right:auto;
+    margin-bottom:10px;
+}
+
+.choice.like{
+    background-color:cornflowerblue;
+}
+
+.choice.dislike{
+    background-color:gray;
+}
+
+.criticize-box {
+    margin-left:auto;
+    margin-right:auto;
+    margin-bottom:10px;
+    overflow:auto;
+}
+
+.criticize {
+    text-align: center;
+    width:170px;
+    height:50px;
+    float:left;
+    margin-right:5px;
+    margin-bottom:5px;
+    color:#333;
+    border:1px solid silver;
+    border-radius:5px;
+    padding:5px;
+}
+
+.criticize:hover {
+    background-color:gainsboro;
+}
+
+/*
+ * -- PURE BUTTON STYLES --
+ * I want my pure-button elements to look a little different
+ */
+.pure-button {
+    padding: 0.5em 2em;
+    border-radius: 5px;
+}
+
+/*
+ * -- MENU STYLES --
+ * I want to customize how my .pure-menu looks at the top of the page
+ */
+
+.home-menu {
+    padding: 0.5em;
+    text-align: center;
+    box-shadow: 0 1px 1px rgba(0,0,0, 0.10);
+}
+.home-menu.pure-menu-open {
+    background: #2d3e50;
+}
+.pure-menu.pure-menu-open.pure-menu-fixed {
+    /* Fixed menus normally have a border at the bottom. */
+    border-bottom: none;
+    /* I need a higher z-index here because of the scroll-over effect. */
+    z-index: 4;
+}
+
+.home-menu .pure-menu-heading {
+    color: white;
+    font-weight: 400;
+    font-size: 120%;
+}
+
+.home-menu .pure-menu-selected a {
+    color: white;
+}
+
+.home-menu a {
+    color: #6FBEF3;
+}
+.home-menu li a:hover,
+.home-menu li a:focus {
+    background: none;
+    border: none;
+    color: #AECFE5;
+}
+
+/*
+ * -- TABLET (AND UP) MEDIA QUERIES --
+ * On tablets and other medium-sized devices, we want to customize some
+ * of the mobile styles.
+ */
+@media (min-width: 48em) {
+
+    /* We increase the body font size */
+    body {
+        margin-bottom: 70px;
+    }
+    /* We want to give the content area some more padding */
+    #content {
+        padding-top:70px;
+    }
+
+    #footer {
+        display:block;
+    }
+
+    /* We can align the menu header to the left, but float the
+    menu items to the right. */
+    .home-menu {
+        text-align: left;
+    }
+        .home-menu ul {
+            float: right;
+        }
+
+    /* We remove the border-separator assigned to .l-box-lrg */
+    .l-box-lrg {
+        border: none;
+    }
+
+}
+
+/*
+ * -- DESKTOP (AND UP) MEDIA QUERIES --
+ * On desktops and other large devices, we want to over-ride some
+ * of the mobile and tablet styles.
+ */
+@media (min-width: 78em) {
+}
+
+
+/*
+ * player
+ */
+iframe {
+     display:block;
+     border:0;
+     margin-bottom: 20px;
+}

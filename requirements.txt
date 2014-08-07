@@ -1,0 +1,7 @@
+Django==1.6.5
+enum34==1.0
+fudge==1.0.3
+numpy==1.8.1
+requests==2.3.0
+simplejson==3.6.0
+soundcloud==0.4.1

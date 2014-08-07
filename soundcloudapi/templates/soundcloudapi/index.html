@@ -1,0 +1,96 @@
+{% extends "soundcloudapi/_base.html" %}
+{% load staticfiles %}
+
+{% block header %}
+    <title>muwonder</title>
+    <script src="{% static 'soundcloudapi/api.js' %}" ></script>
+    <script src="//code.jquery.com/jquery-1.11.1.min.js" ></script>
+    <link rel="stylesheet" href="{% static 'soundcloudapi/jquery.bxslider/jquery.bxslider.css' %}">
+    <link rel="stylesheet" href="{% static 'soundcloudapi/font-awesome/css/font-awesome.min.css' %}">
+    <link rel="stylesheet" href="{% static 'soundcloudapi/index.css' %}">
+{% endblock %}
+
+{% block header_menus %}
+    <ul>
+        <li>
+            <form class="pure-form">
+                <input type="text" class="pure-input-rounded" placeholder="Search" style="font-size:14px;"/>
+            </form>
+        </li>
+    </ul>
+{% endblock %}
+
+{% block content %}
+    <div class="player" >
+        <iframe id="soundcloudwdg" width="100%" >
+            この部分は iframe 対応のブラウザで見てください。
+        </iframe>
+    </div>
+    <div >
+        {% if tracks %}
+        <div id="tracks-pager">
+            {% for track in tracks %}
+                <a data-slide-index="{{ forloop.counter0 }}" href="" data-resource-url="{{ track.permalink_url }}">
+                    {% if track.artwork_url %}
+                        <img src="{{ track.artwork_url }}" />
+                    {% else %}
+                        <img src="{% static 'soundcloudapi/images/soundcloud_default.png' %}" />
+                    {% endif %}
+                </a>
+            {% endfor %}
+        </div>
+        <div id="tracks">
+            {% for track in tracks %}
+                <div class="track slide">
+                    @<a href="{{ track.user.permalink_url }}" target="_blank">{{track.user_id}}</a><br/>
+                    <span>{{track.created_at}}</span><br/>
+                    <span>{{track.genre}}</span><br/>
+                    <pre>{{track.description}}</pre>
+                </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+    <div >
+        <div class="pure-g" >
+            <div class="criticize-box pure-u-1 pure-u-md-1-4" data-bind="foreach: criticize" >
+                <div class="criticize" data-bind="text:$data"></div>
+            </div>
+            <div class="pure-u-2-3 pure-u-md-1-2" style="border:1px solid silver;border-radius:5px;text-align:center;font-size:30px;color:rgb(240,80,0);font-weight:bold">
+                Tap your beat!!
+            </div>
+            <div class="pure-u-1-3 pure-u-md-1-4" >
+                <div class="choice like ">Like</div>
+                <div class="choice dislike">Dislike</div>
+            </div>
+        </div>
+        <!--
+        <form action="/soundcloudapi/criticize" method="post" class="pure-form meter">
+        </form>
+        -->
+    </div>
+
+{% endblock %}
+
+{% block footer %}
+    <div id="footer" >
+        <div class="pure-g container" >
+            <div class="pure-u-1-6" ><div class="pure-button" id="btnPrev" ></div></div>
+            <div class="pure-u-1-6" style="padding-left:3px;"><button class="pure-button" id="btnBack"><i class="fa fa-step-backward"></i></button></div>
+            <div class="pure-u-1-3" style="padding-left:3px;padding-right:3px">
+                <button class="pure-button" id="btnPlay" data-bind="click: widgetPlay">
+                    <i class="fa fa-play" data-bind="visible: !isPlaying()"></i>
+                    <i class="fa fa-pause" data-bind="visible: isPlaying()" ></i>
+                </button>
+            </div>
+            <div class="pure-u-1-6" style="padding-right:3px;"><button class="pure-button" id="btnForward"><i class="fa fa-step-forward"></i></button></div>
+            <div class="pure-u-1-6" ><div class="pure-button" id="btnNext" ></div></div>
+        </div>
+    </div>
+
+    <script src="{% static 'soundcloudapi/jquery.bxslider/jquery.bxslider.min.js' %}" ></script>
+    <script src="{% static 'soundcloudapi/jquery-cookie/jquery.cookie.js' %}" ></script>
+    <script src="{% static 'soundcloudapi/knockoutjs/knockout-3.1.0.js' %}" ></script>
+    <script src="{% static 'soundcloudapi/index.js' %}" ></script>
+
+{% endblock %}
