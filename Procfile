@@ -1,0 +1,1 @@
+web: gunicorn muwonder.wsgi --log-file -

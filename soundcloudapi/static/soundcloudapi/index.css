@@ -19,14 +19,15 @@ html, button, input, select, textarea,
 }
 
 #content {
-    padding-top:90px;
+    padding-top:53px;
 }
 
 #footer {
-    display:none;
+    background-color:#333;
 }
 
 #footer div{
+    padding-top:7px;
     padding-left:3px;
     padding-right:3px;
 }
@@ -34,27 +35,17 @@ html, button, input, select, textarea,
 #footer .pure-button{
     text-align:center;
     /* background-color:rgb(240, 55, 0); */
-    background-color:gray;
-    color:white;
+    background-color:white;
+    color:#333;
     width:100%;
+    padding-top:15px;
 }
 
-.bx-next, .bx-prev{
-    color:white;
-    text-decoration:none;
+#playing{
     width:100%;
-    display:block;
-    height:100%;
-}
-
-h1,
-h2,
-h3,
-h4,
-h5,
-h6,
-label {
-    color: #34495e;
+    height:170px;
+    background-color:#333;
+    padding-top:10px;
 }
 
 .pure-img-responsive {
@@ -62,93 +53,24 @@ label {
     height: auto;
 }
 
+#tracks{
+    overflow:auto;
+}
+
 .track{
-    height:120px;
     font-size:9px;
-    padding-left:15px;
+    padding-left:5px;
     padding-right:15px;
-    border-radius:5px;
-    overflow:auto;
-}
-
-.track a{
-    color:gray;
-    text-decoration:none;
-}
-
-.bx-wrapper {
-    margin: 0 auto 15px;
-}
-
-.bx-wrapper .bx-viewport{
-    left:0px;
-}
-
-#tracks-pager {
-    text-align:center;
-}
-
-#tracks-pager a {
-    text-decoration:none;
-    color:white;
-}
-
-#tracks-pager a.active img {
-    border:1px solid lightslategray;
-    border-radius:3px;
-    width : 30px;
-    height: 30px;
-}
-
-#tracks-pager img {
-    width : 25px;
-    height: 25px;
-    transition: opacity .2s ease-out;
-}
-
-.choice {
-    border-radius: 50%;
-    behavior: url(PIE.htc); /* remove if you don't care about IE8 */
-    width:75px;
-    height:75px;
-    text-align:center;
-    line-height:75px;
-    color:white;
-    margin-left:auto;
-    margin-right:auto;
-    margin-bottom:10px;
-}
-
-.choice.like{
-    background-color:cornflowerblue;
-}
-
-.choice.dislike{
-    background-color:gray;
-}
-
-.criticize-box {
-    margin-left:auto;
-    margin-right:auto;
-    margin-bottom:10px;
-    overflow:auto;
-}
-
-.criticize {
-    text-align: center;
-    width:170px;
-    height:50px;
-    float:left;
-    margin-right:5px;
     margin-bottom:5px;
-    color:#333;
-    border:1px solid silver;
-    border-radius:5px;
-    padding:5px;
+    text-align: left;
 }
 
-.criticize:hover {
-    background-color:gainsboro;
+.track img{
+   border-radius:5px;
+}
+
+.track.active img{
+    border-left:5px solid rgb(240,70,0);
 }
 
 /*
@@ -209,15 +131,12 @@ label {
 
     /* We increase the body font size */
     body {
-        margin-bottom: 70px;
     }
     /* We want to give the content area some more padding */
     #content {
-        padding-top:70px;
     }
 
     #footer {
-        display:block;
     }
 
     /* We can align the menu header to the left, but float the
@@ -252,4 +171,63 @@ iframe {
      display:block;
      border:0;
      margin-bottom: 20px;
+}
+
+/*
+ * CSS Arrow
+ * http://cssarrowplease.com/
+ */
+
+ .arrow_box {
+ 	position: relative;
+ 	background: #ffffff;
+ 	border: 3px solid #c0c0c0;
+ }
+ .arrow_box:after, .arrow_box:before {
+ 	top: 100%;
+ 	left: 80%;
+ 	border: solid transparent;
+ 	content: " ";
+ 	height: 0;
+ 	width: 0;
+ 	position: absolute;
+ 	pointer-events: none;
+ }
+
+ .arrow_box:after {
+ 	border-color: rgba(255, 255, 255, 0);
+ 	border-top-color: #ffffff;
+ 	border-width: 10px;
+ 	margin-left: -10px;
+ }
+ .arrow_box:before {
+ 	border-color: rgba(192, 192, 192, 0);
+ 	border-top-color: #c0c0c0;
+ 	border-width: 14px;
+ 	margin-left: -14px;
+ }
+
+ /* additinal */
+ .arrow_box {
+    padding:10px;
+    margin-bottom:15px;
+ }
+
+ .message{
+    min-height:110px;
+    max-height:200px;
+    overflow:auto;
+ }
+
+.message .title{
+    margin-top: 5px;
+    margin-bottom: 15px;
+    font-weight: bold;
+}
+
+.arrow_box .message pre{
+    font-family:"Hiragino Kaku Gothic ProN", Meiryo, sans-serif !important;
+}
+.arrow_box .message a{
+    color:#7f8c8d;
 }

@@ -1,18 +1,20 @@
 import enum
+import copy
 from datetime import datetime, timedelta
 from knowbre import CriticizePattern, CriticizeItem, CriticizeDirection
 from soundcloudapi.models import Track
+import random
 
 
 class CriticizeType(enum.Enum):
     Proposed = 0
-    Sense = 1
+    Input = 1
     Taste = 2
 
 
 class Criticize(object):
 
-    def __init__(self, track_id, criticize_type, value):
+    def __init__(self, track_id, criticize_type, value={}):
         self.track_id = track_id
 
         if isinstance(criticize_type, CriticizeType):
@@ -38,9 +40,22 @@ class Criticize(object):
 
     def to_pattern(self):
         if self.criticize_type == CriticizeType.Proposed:
-            return CriticizePattern(self.value)
+            cp = CriticizePattern(self.value)
+            cp.pattern_text = self.customize_pattern_text(cp)
+            return cp
         else:
             return None
+
+    @classmethod
+    def customize_pattern_text(cls, customize_pattern):
+        text = customize_pattern.pattern_text
+        if customize_pattern.is_positive():
+            text = text.replace(u"genre score", u"loud genre")
+            text = text.replace(u"elapsed", u"old")
+        else:
+            text = text.replace(u"genre score", u"calm genre")
+            text = text.replace(u"elapsed", u"recent")
+        return text
 
     def to_dict(self):
         target_track = None
@@ -52,7 +67,7 @@ class Criticize(object):
                 raise Exception("Track " + self.track_id + " is not found ")
 
         conditions = {}
-        if self.criticize_type == CriticizeType.Sense:
+        if self.criticize_type == CriticizeType.Input:
             if "bpm" in self.value:
                 conditions = self.__make_conditions(CriticizeItem.direction_around(self.value["bpm"]))
 
@@ -66,10 +81,15 @@ class Criticize(object):
 
             conditions = self.__make_conditions(**items)
 
-        elif self.criticize_type == CriticizeType.Sense:
+        elif self.criticize_type == CriticizeType.Taste:
             items = {}
             for c in self.__get_criticizable():
                 target_value = getattr(target_track, c)
+                if c == "created_at":
+                    continue
+                elif c == "genre":
+                    target_value = target_value.lower()
+
                 items.update({c: CriticizeItem.direction_around(target_value)})
 
             conditions = self.__make_conditions(**items)
@@ -82,16 +102,35 @@ class Criticize(object):
             genres = Track.get_genres()
             g_score = c_dict["genre_score"]
             # when condition, name is "genres"
-            c_dict["genres"] = sorted(genres, key=lambda k: abs(genres[k] - g_score))[:3]
+            c_dict["genres"] = u",".join(sorted(genres, key=lambda k: abs(genres[k] - g_score))[:3])
             c_dict.pop("genre_score")
 
-        elif "genre" in c_dict:
+        if "genre" in c_dict:
             c_dict["genres"] = c_dict["genre"]
+            c_dict.pop("genre")
 
-        c_dict.pop("genre")
-        # todo add static default
+        if self.criticize_type == CriticizeType.Proposed:
+            c_dict = self.__set_default_conditions(c_dict)
 
         return c_dict
+
+    @classmethod
+    def get_default_conditions(cls):
+        return cls.__set_default_conditions({})
+
+    @classmethod
+    def __set_default_conditions(cls, conditions):
+        cond = copy.deepcopy(conditions)
+        if not "created_at" in cond:
+            base_date = datetime.now() - timedelta(days=365)
+            cond["created_at"] = {"from": base_date.strftime("%Y-%m-%d %H:%M:%S")}
+        if not "genres" in cond:
+            random_genres = random.sample(Track.get_genres().keys(), 5)
+            cond["genres"] = u",".join(random_genres)
+        if not "filter" in cond:
+            cond["filter"] = u"streamable"
+
+        return cond
 
     @classmethod
     def __get_criticizable(cls):

@@ -1,0 +1,20 @@
+<script type="text/html" id="track-template">
+    <a data-bind="text: title, attr{ href:permalink_url }" class="title" target="_blank"></a>
+    <pre data-bind="text: description"></pre>
+</script>
+
+<script type="text/html" id="message-template">
+    <pre data-bind="text: message"></pre>
+    <div>
+        <button  class="pure-button" data-bind="click: $root.retry, visible:$root.isRetry">Retry Loading</button>
+    </div>
+</script>
+
+<script type="text/html" id="criticize-template">
+    <div data-bind="text: text" class="title"></div>
+    <div>
+        <button  class="pure-button" data-bind="click: function(){ $root.answer(true) } ">Yes</button>
+        &nbsp;&nbsp;&nbsp;&nbsp;
+        <button  class="pure-button" data-bind="click: function(){ $root.answer(false) } ">No</button>
+    </div>
+</script>

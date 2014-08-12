@@ -1,6 +1,7 @@
 from django.http import HttpResponse, HttpResponseNotFound
 from django.shortcuts import render
-from soundcloudapi.models import Track, Criticize, JsonSerializable
+from soundcloudapi.models import Track, Criticize, CriticizeType, JsonSerializable
+import json
 
 
 class RecommendApi(object):
@@ -27,15 +28,22 @@ class RecommendApi(object):
         request.session[cls.CRITICIZE_SESSION_KEY] = cs
 
     @classmethod
-    def get_criticize(cls, posted):
+    def make_criticize(cls, posted):
         track_id = posted.get(u"track_id")
         criticize_type = posted.get(u"criticize_type")
         value = posted.get(u"value")
 
-        if track_id and criticize_type and value:
+        if track_id and criticize_type:
             return Criticize(track_id, criticize_type, value)
         else:
             return None
+
+    @classmethod
+    def dispatch(cls, request):
+        if request.method == "POST":
+            return cls.criticize(request)
+        else:
+            return cls.list(request)
 
     @classmethod
     def list(cls, request):
@@ -48,7 +56,7 @@ class RecommendApi(object):
 
     @classmethod
     def criticize(cls, request):
-        criticize = cls.get_criticize(request.POST)
+        criticize = cls.make_criticize(request.POST)
 
         if criticize:
             cls.add_criticize(request, criticize)
@@ -58,27 +66,43 @@ class RecommendApi(object):
             return None
 
     @classmethod
-    def __make_response(cls, criticize, history=None):
-        return HttpResponse(cls.evaluate(criticize, history))
+    def __make_response(cls, criticize, history, limit=20):
+        result = cls.evaluate(criticize, history)
+        if limit > 0:
+            result["tracks"] = result["tracks"][:limit]
+            result["criticize"] = result["criticize"][:limit]
+
+        jsonized = json.dumps(result)
+        return HttpResponse(jsonized, content_type="application/json")
 
     @classmethod
     def evaluate(cls, criticize, history=None):
         track = Track()
 
         # get tracks by criticizes
-        tracks = track.find(criticize.to_conditions())
-        selected = Track(criticize.get_track())
+        tracks = track.find(Criticize.get_default_conditions() if not criticize else criticize.to_conditions())
 
-        # evaluate tracks
-        evaluator = Track.make_evaluator()
-        tracks_evaluated = evaluator.calc_score(tracks, selected)
+        selected = None
+        if criticize:
+            selected = Track(criticize.get_track())
+        elif len(tracks) > 0:
+            selected = tracks[0]
 
-        # criticize patterns
-        patterns = evaluator.make_pattern(tracks, selected)
-        patterns_list = map(lambda p: p.to_dict(), patterns)
+        result = {"tracks": [], "criticize": []}
+        if selected:
+            # evaluate tracks
+            evaluator = Track.make_evaluator()
+            tracks_evaluated = evaluator.calc_score(tracks, selected)
 
-        serialized_tracks = JsonSerializable.to_json_array(map(lambda scored: scored.item, tracks_evaluated))
-        return {"tracks": serialized_tracks, "criticize": patterns_list}
+            # criticize patterns
+            patterns = evaluator.make_pattern(tracks, selected)
+            pattern_list = map(lambda p: p.to_dict(Criticize.customize_pattern_text), patterns)
+
+            serialized_tracks = map(lambda scored: scored.item.to_dict(), tracks_evaluated)
+            result["tracks"] = serialized_tracks
+            result["criticize"] = pattern_list
+
+        return result
 
 
 # Create your views here.

@@ -9,14 +9,12 @@ class JsonSerializable(object):
         self.__convert_rule = {}
         self.__convert_rule.update({"datetime": lambda v: v.strftime("%Y/%m/%d %H:%M:%S")})
 
-    def to_json(self):
+    def to_dict(self):
         dictionalized = self.__make_attribute_dict()
-        return json.dumps(dictionalized)
+        return dictionalized
 
-    @classmethod
-    def to_json_array(cls, json_serializable_array):
-        dictionalized_array = map(lambda dic: dic.__make_attribute_dict(), json_serializable_array)
-        return json.dumps(dictionalized_array)
+    def to_json(self):
+        return json.dumps(self.to_dict())
 
     def __make_attribute_dict(self):
         attributes = self.__get_class_attributes()

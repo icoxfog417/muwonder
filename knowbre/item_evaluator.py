@@ -30,11 +30,11 @@ class ItemEvaluator(object):
         if isinstance(key_or_dict, dict) and not rule:
             self.__rules.update(key_or_dict)
         elif isinstance(rule, EvaluationType):
-            if key_or_dict == EvaluationType.MoreIsBetter:
+            if rule == EvaluationType.MoreIsBetter:
                 self.__rules[key_or_dict] = self.calc_more_is_better
-            elif key_or_dict == EvaluationType.LessIsBetter:
+            elif rule == EvaluationType.LessIsBetter:
                 self.__rules[key_or_dict] = self.calc_less_is_better
-            elif key_or_dict == EvaluationType.NearIsBetter:
+            elif rule == EvaluationType.NearIsBetter:
                 self.__rules[key_or_dict] = self.calc_near_is_better
         else:
             self.__rules[key_or_dict] = rule

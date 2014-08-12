@@ -7,13 +7,13 @@ class CriticizePattern(object):
     def __init__(self, pattern="", score=0.0):
         self.pattern = pattern
         self.score = score
-        self.get_pattern_text = lambda p: ""
+        self.pattern_text = self.make_pattern_text(pattern)
 
     def is_positive(self):
         return self.pattern.split(":")[0] == "+"
 
     def get_pattern_properties(self):
-        return self.pattern.split(":")[1].split(",")
+        return map(lambda token: token.strip(), self.pattern.split(":")[1].split(","))
 
     def is_fit_pattern(self, base_item, target_item):
         is_fit = []
@@ -37,13 +37,30 @@ class CriticizePattern(object):
             return False
 
     def __str__(self):
-        return self.get_pattern_text(self) + "(" + self.pattern + ")  " + str(self.score)
+        return self.pattern_text + "(" + self.pattern + ")  " + str(self.score)
 
-    def to_dict(self):
-        return {
-            "pattern": self.pattern,
-            "text": self.get_pattern_text(self)
-        }
+    def make_pattern_text(self, pattern):
+        text = u"Do you like "
+        if self.is_positive():
+            text += u"more "
+        else:
+            text += u"less "
+
+        text += u" and ".join(map(lambda p: unicode(p.replace("_", " ")), self.get_pattern_properties()))
+        text += u"?"
+        return text
+
+    def to_dict(self, text_customize=None):
+        if not text_customize:
+            return {
+                "pattern": self.pattern,
+                "text": self.pattern_text
+            }
+        else:
+            return {
+                "pattern": self.pattern,
+                "text": text_customize(self)
+            }
 
 
 class CriticizeDirection(enum.Enum):

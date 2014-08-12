@@ -1,4 +1,6 @@
 # from django.db import models
+from django.conf import settings
+from django.conf.urls.static import static
 import soundcloud
 import secret_settings
 from datetime import datetime
@@ -66,9 +68,12 @@ class Track(JsonSerializable):
         else:
             self.created_at = datetime.strptime(" ".join(item.created_at.split(" ")[0:2]), '%Y/%m/%d %H:%M:%S')
             if item.artwork_url:
-                self.artwork_url = item.artwork_url.replace("-large", "-tiny")
+                self.artwork_url = item.artwork_url
             elif "avatar_url" in item.user:
                 self.artwork_url = item.user["avatar_url"]
+            else:
+                self.artwork_url = static("soundcloudapi/images/soundcloud_default.png")
+
             self.genre = item.genre if item.genre else ""
 
     @classmethod
@@ -92,7 +97,13 @@ class Track(JsonSerializable):
         @conditions
         """
 
-        tracks = self.__client.get("/tracks", **conditions)
+        find_condition = conditions
+
+        if find_condition:
+            tracks = self.__client.get("/tracks", **find_condition)
+        else:
+            tracks = self.__client.get("/tracks", {})
+
         track_items = map(lambda t: Track(t), tracks)
         return track_items
 
@@ -111,40 +122,40 @@ class Track(JsonSerializable):
     @classmethod
     def get_genres(cls):
         genres = {
-            "metal": 1,
-            "disco": 0.95,
-            "dance": 0.9,
-            "hip hop": 0.85,
-            "rap": 0.84,
-            "progressive house": 0.8,
-            "house": 0.77,
-            "trap": 0.71,
-            "trip hop": 0.7,
-            "r&b": 0.65,
-            "soul": 0.6,
-            "latin": 0.55,
-            "reggae": 0.5,
-            "hardcore techno": 0.4,
-            "techno": 0.39,
-            "trance": 0.38,
-            "minimal techno": 0.36,
-            "tech House": 0.35,
-            "electro": 0.31,
-            "electronic": 0.3,
-            "alternative rock": 0.2,
-            "indie rock": 0.18,
-            "punk": 0.15,
-            "rock": 0.1,
-            "pop": 0,
-            "singer-songwriter": -0.1,
-            "jazz": -0.15,
-            "dubstep": -0.4,
-            "deep house": -0.5,
-            "bass": -0.6,
-            "ambient": -0.65,
-            "folk": -0.7,
-            "country": -0.75,
-            "piano": -0.9,
-            "classical": -1
+            u"metal": 1,
+            u"disco": 0.95,
+            u"dance": 0.9,
+            u"hip hop": 0.85,
+            u"rap": 0.84,
+            u"progressive house": 0.8,
+            u"house": 0.77,
+            u"trap": 0.71,
+            u"trip hop": 0.7,
+            u"r&b": 0.65,
+            u"soul": 0.6,
+            u"latin": 0.55,
+            u"reggae": 0.5,
+            u"hardcore techno": 0.4,
+            u"techno": 0.39,
+            u"trance": 0.38,
+            u"minimal techno": 0.36,
+            u"tech house": 0.35,
+            u"electro": 0.31,
+            u"electronic": 0.3,
+            u"alternative rock": 0.2,
+            u"indie rock": 0.18,
+            u"punk": 0.15,
+            u"rock": 0.1,
+            u"pop": 0,
+            u"singer-songwriter": -0.1,
+            u"jazz": -0.15,
+            u"dubstep": -0.4,
+            u"deep house": -0.5,
+            u"bass": -0.6,
+            u"ambient": -0.65,
+            u"folk": -0.7,
+            u"country": -0.75,
+            u"piano": -0.9,
+            u"classical": -1
         }
         return genres
