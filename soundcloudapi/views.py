@@ -1,4 +1,5 @@
 from django.http import HttpResponse, HttpResponseNotFound
+from django.views.decorators.csrf import ensure_csrf_cookie
 from django.shortcuts import render
 from soundcloudapi.models import Track, Criticize, CriticizeType, JsonSerializable
 import json
@@ -51,7 +52,6 @@ class RecommendApi(object):
         send list of tracks
         """
         # request.QUERY_PARAMS
-
         return cls.__make_response(None, cls.get_criticize(request))
 
     @classmethod
@@ -106,5 +106,6 @@ class RecommendApi(object):
 
 
 # Create your views here.
+@ensure_csrf_cookie
 def index(request):
     return render(request, "soundcloudapi/index.html")
