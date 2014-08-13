@@ -1,32 +1,32 @@
 from django.http import HttpResponse, HttpResponseNotFound
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.shortcuts import render
-from soundcloudapi.models import Track, Criticize, CriticizeType, JsonSerializable
+from soundcloudapi.models import Track, TrackCriticize, TrackCriticizePattern
 import json
 
 
 class RecommendApi(object):
 
-    CRITICIZE_SESSION_KEY = "criticize_key"
+    SESSION_STORE_KEY = "SESSION_STORE_KEY"
 
     def __init__(self):
         pass
 
     @classmethod
-    def get_criticize(cls, request):
-        if request.session.get(cls.CRITICIZE_SESSION_KEY, False):
-            return request.session.get(cls.CRITICIZE_SESSION_KEY)
+    def get_session(cls, request):
+        if request.session.get(cls.SESSION_STORE_KEY, False):
+            return request.session.get(cls.SESSION_STORE_KEY)
         else:
             return []
 
     @classmethod
-    def add_criticize(cls, request, criticize):
-        cs = request.session.get(cls.CRITICIZE_SESSION_KEY, False)
+    def add_session(cls, request, criticize):
+        cs = request.session.get(cls.SESSION_STORE_KEY, False)
         if not cs:
             cs = []
 
-        cs.append(criticize.to_dict())
-        request.session[cls.CRITICIZE_SESSION_KEY] = cs
+        cs.append(criticize.values)
+        request.session[cls.SESSION_STORE_KEY] = cs
 
     @classmethod
     def make_criticize(cls, posted):
@@ -35,39 +35,23 @@ class RecommendApi(object):
         value = posted.get(u"value")
 
         if track_id and criticize_type:
-            return Criticize(track_id, criticize_type, value)
+            return TrackCriticize(track_id, criticize_type, value)
         else:
-            return None
+            raise Exception("Can not create criticize by POST data. track_id or criticizy_type parameter is missing")
 
     @classmethod
     def dispatch(cls, request):
+        criticize = None
+        limit = 20  # todo:get limit by parameter
+
+        # need try catch statement
         if request.method == "POST":
-            return cls.criticize(request)
-        else:
-            return cls.list(request)
+            criticize = cls.make_criticize(request.POST)
+            cls.add_session(request, criticize)
 
-    @classmethod
-    def list(cls, request):
-        """
-        send list of tracks
-        """
-        # request.QUERY_PARAMS
-        return cls.__make_response(None, cls.get_criticize(request))
-
-    @classmethod
-    def criticize(cls, request):
-        criticize = cls.make_criticize(request.POST)
-
-        if criticize:
-            cls.add_criticize(request, criticize)
-            return cls.__make_response(criticize, cls.get_criticize(request))
-        else:
-            #todo need error handling
-            return None
-
-    @classmethod
-    def __make_response(cls, criticize, history, limit=20):
+        history = cls.get_session(request)
         result = cls.evaluate(criticize, history)
+
         if limit > 0:
             result["tracks"] = result["tracks"][:limit]
             result["criticize"] = result["criticize"][:limit]
@@ -80,7 +64,8 @@ class RecommendApi(object):
         track = Track()
 
         # get tracks by criticizes
-        tracks = track.find(Criticize.get_default_conditions() if not criticize else criticize.to_conditions())
+        condition = TrackCriticize.get_default_conditions() if not criticize else criticize.to_conditions()
+        tracks = track.find(condition)
 
         selected = None
         if criticize:
@@ -91,12 +76,12 @@ class RecommendApi(object):
         result = {"tracks": [], "criticize": []}
         if selected:
             # evaluate tracks
-            evaluator = Track.make_evaluator()
+            evaluator = Track.make_evaluator(TrackCriticizePattern)
             tracks_evaluated = evaluator.calc_score(tracks, selected)
 
             # criticize patterns
             patterns = evaluator.make_pattern(tracks, selected)
-            pattern_list = map(lambda p: p.to_dict(Criticize.customize_pattern_text), patterns)
+            pattern_list = map(lambda p: p.to_dict(), patterns)
 
             serialized_tracks = map(lambda scored: scored.item.to_dict(), tracks_evaluated)
             result["tracks"] = serialized_tracks

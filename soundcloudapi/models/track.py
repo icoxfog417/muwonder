@@ -5,7 +5,7 @@ import soundcloud
 import secret_settings
 from datetime import datetime
 from knowbre.item_evaluator import ItemEvaluator, EvaluationType
-from soundcloudapi.models import JsonSerializable
+from soundcloudapi.models import JsonSerializable, SoundCloudResource
 
 
 # Create your models here.
@@ -22,7 +22,7 @@ class Track(JsonSerializable):
 
         self.id = ""
         self.created_at = datetime.now()
-        self.elapsed = lambda: (datetime.now() - self.created_at).total_seconds() if self.created_at else None
+        self.elapsed = lambda: - (datetime.now() - self.created_at).total_seconds() if self.created_at else None
         self.user_id = ""
         self.title = ""
         self.permalink_url = ""
@@ -104,7 +104,7 @@ class Track(JsonSerializable):
         else:
             tracks = self.__client.get("/tracks", {})
 
-        track_items = map(lambda t: Track(t), tracks)
+        track_items = map(lambda t: Track(SoundCloudResource(t)), tracks)
         return track_items
 
     @classmethod

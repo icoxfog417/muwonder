@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+    <head>
+    <meta charset="UTF-8">
+    <title>MuGuideTest</title>
+    <script src="../static/soundcloudapi/muguide.js" ></script>
+    <script type="text/javascript">
+    function character() {
+        var guide1 = new MuGuide("sample1");
+        guide1.waiting(true);
+
+        var guide2 = new MuGuide("sample2");
+        guide2.amazing();
+        
+        var guide3 = new MuGuide("sample3");
+        guide3.thinking(true);
+        setTimeout(function(){
+            guide3.thinking(false);
+        },5000);
+
+        var guide4 = new MuGuide("sample4");
+        guide4.sleeping(true);
+
+        var guide5 = new MuGuide("sample5");
+        guide5.listening(true);
+        setTimeout(function(){
+            guide5.listening(false);
+        },5000);
+        
+        var guide6 = new MuGuide("sample6");
+        guide6.confusing();
+        
+    }
+    </script>
+</head>
+<body onLoad="character()">
+<h2>MuGuideTest</h2>
+<canvas id="sample1" >
+</canvas>
+<canvas id="sample2" >
+</canvas>
+<canvas id="sample3" >
+</canvas>
+<canvas id="sample4" >
+</canvas>
+<canvas id="sample5" >
+</canvas>
+<canvas id="sample6" >
+</canvas>
+
+
+</body>
+</html>

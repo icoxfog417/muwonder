@@ -1,4 +1,4 @@
-from knowbre import CriticizeItem, CriticizePattern, CriticizeDirection
+from knowbre import CriticizeTarget, CriticizePattern, CriticizeDirection
 from item_evaluator_test import print_title
 import unittest
 

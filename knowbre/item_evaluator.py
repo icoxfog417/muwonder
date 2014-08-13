@@ -16,7 +16,8 @@ class EvaluationType(enum.Enum):
 
 class ItemEvaluator(object):
 
-    def __init__(self):
+    def __init__(self, pattern_type=CriticizePattern):
+        self.pattern_type = pattern_type
         self.__rules = {}
         self.__weights = {}
 
@@ -113,7 +114,7 @@ class ItemEvaluator(object):
         attributes = self.__rules.keys()
 
         # initialize score vector by 0
-        score_vector = map(lambda item: Scored(item), item_list)
+        score_vector = map(lambda item: EvaluateScore(item), item_list)
 
         for attr_name in attributes:
             if attr_name in self.__rules:
@@ -187,7 +188,7 @@ class ItemEvaluator(object):
 
         # order by support rate, and define pattern by at least two count
         patterns = filter(lambda p: p[1] > 1, pt_counter.items())
-        patterns = map(lambda item: CriticizePattern(item[0], item[1] / length), patterns)
+        patterns = map(lambda item: self.pattern_type(item[0], item[1] / length), patterns)
         patterns = sorted(patterns, key=lambda p: p.score)
         return patterns
 
@@ -200,7 +201,7 @@ class NotCalculatable(Exception):
         return repr(self.message)
 
 
-class Scored(object):
+class EvaluateScore(object):
 
     def __init__(self, item, score=0):
         self.item = item

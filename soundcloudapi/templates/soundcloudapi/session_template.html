@@ -13,8 +13,11 @@
 <script type="text/html" id="criticize-template">
     <div data-bind="text: text" class="title"></div>
     <div>
-        <button  class="pure-button" data-bind="click: function(){ $root.answer(true) } ">Yes</button>
+        <button  class="pure-button" data-bind="click: function(){ $root.answer(true, option) } ">Yes</button>
         &nbsp;&nbsp;&nbsp;&nbsp;
-        <button  class="pure-button" data-bind="click: function(){ $root.answer(false) } ">No</button>
+        <button  class="pure-button" data-bind="click: function(){ $root.answer(false, option) } ">No</button>
+    </div>
+    <div data-bind="if:option">
+
     </div>
 </script>

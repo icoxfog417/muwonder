@@ -61,7 +61,7 @@
                     <i class="fa fa-pause" data-bind="visible: isPlaying()" ></i>
                 </button>
             </div>
-            <div class="pure-u-1-6" style="padding-right:3px;"><button class="pure-button" id="btnForward"><i class="fa fa-step-forward"></i></button></div>
+            <div class="pure-u-1-6" style="padding-right:3px;"><button class="pure-button" id="btnRepeat" data-bind="click:widgetRepeat"><i class="fa fa-repeat"></i></button></div>
             <div class="pure-u-1-6" ><button class="pure-button" id="btnNext" data-bind="click:function(){ widgetMove(true) }"><i class="fa fa-fast-forward"></i></button></div>
             </div>
     </div>
@@ -69,8 +69,9 @@
     {% include "soundcloudapi/session_template.html" %}
 
     <script src="{% static 'soundcloudapi/jquery-cookie/jquery.cookie.js' %}" ></script>
-    <script src="{% static 'soundcloudapi/knockoutjs/knockout-3.1.0.js' %}" ></script>
+    <script src="{% static 'soundcloudapi/knockoutjs/knockout-3.2.0.js' %}" ></script>
     <script src="{% static 'soundcloudapi/muguide.js' %}" ></script>
+    <script src="{% static 'soundcloudapi/behaviorwatcher.js' %}" ></script>
     <script src="{% static 'soundcloudapi/index.js' %}" ></script>
 
 {% endblock %}

@@ -4,20 +4,64 @@ var MuGuide = (function () {
         this.canvas = document.getElementById(canvasId);
         this.context = this.canvas.getContext('2d');
         this.interval = null;
+        this.state = "";
         this.bodyColor = "slategray";
     }
 
-    MuGuide.prototype.init = function () {
+    MuGuide.State = {
+        default:"default",
+        waiting:"waiting",
+        thinking:"thinking",
+        listening:"listening",
+        confusing:"confusing",
+        sleeping:"sleeping",
+        amazing:"amazing"
+    }
+
+    MuGuide.prototype.currentState = function () {
+        return this.state;
+    }
+
+    MuGuide.prototype.default = function () {
+        this.state = MuGuide.State.default;
         this.drawBody();
         this.drawMouth();
         this.drawEye(40,40,10);
         this.drawEye(80,40,10);
     };
 
+    MuGuide.prototype.initialize = function () {
+        this.clear();
+        clearInterval(this.interval);
+        this.default();
+    }
+
+    MuGuide.prototype.waiting = function (isBegin) {
+        if(isBegin){
+            this.state = MuGuide.State.waiting;
+            var self = this;
+            this.default();
+            clearInterval(this.interval);
+            this.interval = setInterval(function(){
+                self.clear();
+                self.drawBody();
+                self.drawMouth();
+                self.drawEyeClose();
+                setTimeout(function(){
+                    self.default();
+                },500);
+            },4000);
+        }else{
+            this.initialize();
+        }
+    };
+
     MuGuide.prototype.thinking = function (isBegin) {
         if(isBegin){
+            this.state = MuGuide.State.thinking;
             var totalCount = 0;
             var self = this;
+            clearInterval(this.interval);
             this.interval = setInterval(function(){
                 self.clear();
                 self.drawBody();
@@ -26,16 +70,16 @@ var MuGuide = (function () {
                 totalCount += 1;
             },500);
         }else{
-            clearInterval(this.interval);
-            this.clear();
-            this.init();
+            this.initialize();
         }
     };
 
     MuGuide.prototype.listening = function (isBegin) {
         if(isBegin){
+            this.state = MuGuide.State.listening;
             var totalCount = 0;
             var self = this;
+            clearInterval(this.interval);
             this.interval = setInterval(function(){
                 self.clear();
                 self.drawBody();
@@ -50,20 +94,20 @@ var MuGuide = (function () {
                 totalCount += 1;
             },500);
         }else{
-            clearInterval(this.interval);
-            this.clear();
-            this.init();
+            this.initialize();
         }
     };
 
-    MuGuide.prototype.confuse = function () {
+    MuGuide.prototype.confusing = function () {
+        this.state = MuGuide.State.confusing;
         this.clear();
         this.drawBody();
         this.drawMouth();
         this.drawEyeConfuse();
     };
 
-    MuGuide.prototype.sleep = function () {
+    MuGuide.prototype.sleeping = function () {
+        this.state = MuGuide.State.sleeping;
         this.clear();
         this.drawBody();
         this.drawMouthSleep();
@@ -71,6 +115,7 @@ var MuGuide = (function () {
     };
 
     MuGuide.prototype.amazing = function () {
+        this.state = MuGuide.State.amazing;
         this.clear();
         this.drawBody("coral");
         this.drawMouthAmazing();

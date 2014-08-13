@@ -1,6 +1,6 @@
 from django.test import TestCase
 from soundcloudapi.views import RecommendApi
-from soundcloudapi.models import Track, Criticize, CriticizeType
+from soundcloudapi.models import Track, TrackCriticizePattern, TrackCriticizeType
 
 
 # Create your tests here.
@@ -36,11 +36,11 @@ class TrackTestCase(TestCase):
         print(resp["criticize"])
 
     def __test_track(self, cr_pattern):
-        criticize = RecommendApi.get_criticize(cr_pattern)
+        criticize = RecommendApi.make_criticize(cr_pattern)
 
         condition = criticize.to_conditions()
         return condition
 
     def __evaluate_track(self, cr_pattern):
-        criticize = RecommendApi.get_criticize(cr_pattern)
+        criticize = RecommendApi.make_criticize(cr_pattern)
         return RecommendApi.evaluate(criticize)

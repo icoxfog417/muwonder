@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+    <head>
+    <meta charset="UTF-8">
+    <title>BehaviorEventTest</title>
+    <script src="http://code.jquery.com/jquery-1.11.1.min.js" ></script>
+    <script src="../static/soundcloudapi/muguide.js" ></script>
+    <script src="../static/soundcloudapi/behaviorwatcher.js" ></script>
+    <script type="text/javascript">
+    function character() {
+        var guide1 = new MuGuide("sample1");
+        guide1.default();
+        
+        var watcher = new BehaviorWatcher();
+        watcher.subscribe("sampleClicker",2000,
+        function(count, elapsed){
+            guide1.amazing();
+            $("#message").text("you clicked me " + count + " times in " + (elapsed / 1000) + " seconds!");
+            setTimeout(function(){ guide1.default(); }, 1000);
+            return true;
+        })
+        watcher.subscribeNoBehaviorHandler(6000,function(){
+            $("#message").text("Are you boring?? no behavior occure");
+            guide1.confusing();
+            setTimeout(function(){ guide1.default(); }, 1000);
+            return true;
+        })
+        
+        $("#sample1").click(function(){
+            watcher.detect("sampleClicker");
+        })
+        
+        watcher.start();
+        
+    }
+    </script>
+</head>
+<body onLoad="character()">
+<h2>BehaviorEventTest</h2>
+<canvas id="sample1" >
+</canvas>
+<div id="message" style="width:200px;height:100px;padding:10px;border:1px solid silver">
+    Welcome !!
+</div>
+</body>
+</html>

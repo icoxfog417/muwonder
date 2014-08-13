@@ -14,6 +14,7 @@ $(function(){
         resizeContent()
     })
 
+    //adjust content height to window size
     function resizeContent(){
         var height = $(window).height();
         var minHeight = 100;
@@ -28,15 +29,16 @@ $(function(){
         var self = this;
         self._widget = null;
         self.API_TARGET = "/soundcloudapi/recommends/";
+        self.guide = new MuGuide("muguide");
+        self.behaviorWatcher = new BehaviorWatcher();
 
         self.isPlaying = ko.observable(false);
         self.trackIndex = ko.observable(0);
         self.criticizeIndex = ko.observable(0);
         self.tracks = ko.observableArray([]);
         self.criticize = ko.observableArray([]);
-
         self.session = ko.observableArray([]);
-        self.guide = new MuGuide("muguide");
+
         self.guideMode = 0;
         self.isRetry = ko.observable(false);
         self.errorStatus = "";
@@ -44,27 +46,35 @@ $(function(){
         self.session_template = {
             track : "track-template",
             message : "message-template",
-            taste : "taste-template",
-            criticize : "criticize-template",
-            sense : "sense-template",
-            error : "error-template"
+            criticize : "criticize-template"
         }
         self.criticize_type = {
-            proposed : 0,
-            input : 1,
-            taste : 2
+            pattern : 0,
+            parameter : 1,
+            like : 2
         }
         self.guide_mode = {
-            track : 0,
-            taste : 1,
-            proposed : 2
+            pattern : 0,
+            parameter : 1,
+            like : 2,
+            track : 8,
+            reload : 9
+        }
+        self.askSequence = [self.guide_mode.track, self.guide_mode.reload, self.guide_mode.like, self.guide_mode.pattern];
+        self.behaviorKind = {
+            askAboutTrack : "askAboutTrack",
+            askBPM : "askBPM"
         }
 
         /*
          * show conversation
          */
         self.addSession = function(template, data){
-            var s = {template:template, data:data};
+            var passData = data;
+            if(passData["option"] === undefined){
+                passData["option"] = null;
+            }
+            var s = {template:template, data:passData};
             self.session.push(s);
         }
         self.setSession = function(template, data){
@@ -76,9 +86,30 @@ $(function(){
          * initialization
          */
         self.init = function(){
-            self.guide.init();
-            self.setSession(self.session_template.message,
-                {message: "Let me introduce you the various genre tracks!\nPlease listen these."});
+            //set timeline event
+            self.behaviorWatcher.subscribe(self.behaviorKind.askAboutTrack,30000,function(){
+                 self.showGuide(self.guide_mode.like);
+                 return true;
+            })
+
+            //set ask bpm event
+            self.behaviorWatcher.subscribe(self.behaviorKind.askBPM,2000,function(detectCount, elapsed){
+                bpm = Math.floor((detectCount / elapsed) * 1000 * 60);
+                if(bpm > 50){
+                    self.guide.amazing();
+                    var option = {
+                        parameter: bpm
+                    };
+                    self.showGuide(self.guide_mode.parameter, option);
+                    return true;
+                }
+            })
+
+            //set timeline event
+            self.behaviorWatcher.subscribeNoBehaviorHandler(30000,function(){
+                self.showGuide(self.guide_mode.reload);
+                return true;
+            })
 
             //for Django csrf
             $.ajaxSetup({
@@ -90,12 +121,21 @@ $(function(){
                 }
             });
 
+            self.behaviorWatcher.start();
+            self.getTracks("Let me introduce you the various genre tracks!");
+        }
+
+        self.getTracks = function(message){
+            self.setSession(self.session_template.message, {message: message});
+            self.guide.thinking(true);
+
             self.load("GET", {}, function(error){
                 if(!error){
+                    self.guide.waiting(true);
                     self.widgetLoadByIndex(0);
                 }else{
+                    self.guide.confusing();
                     self.isRetry(true);
-                    self.guide.confuse();
                     self.setSession(self.session_template.message,
                         {message: "Oops, server cause error.\nPlease try again."});
                 }
@@ -116,7 +156,7 @@ $(function(){
             .done(function(data) {
                 var playing = null;
                 if(self.isPlaying()){
-                    playing = self.tracks(self.trackIndex());
+                    playing = self.tracks()[self.trackIndex()];
                 }
 
                 if(data){
@@ -169,65 +209,108 @@ $(function(){
         self.retry = function(){
             var errorOccured = self.errorStatus;
             self.errorStatus = "";
-            self.init();
+            self.getTracks("Try again ...");
         }
 
         /*
          * for criticize
          */
         self.ask = function(){
-            self.guideMode += 1;
-            self.guideMode = self.guideMode % 3;
-            self.showGuide(self.guideMode);
-        }
-
-        self.showGuide = function(mode){
-            self.guideMode = mode;
-            if(mode == self.guide_mode.track){
-                self.setSession(self.session_template.track, self.tracks()[self.trackIndex()]);
-            }else if(mode == self.guide_mode.taste){
-                self.setSession(self.session_template.criticize, {text: "Do you like this Track?"});
-            }else if(mode == self.guide_mode.proposed){
-                self.setSession(self.session_template.criticize, self.criticize()[self.criticizeIndex()]);
-            }else{
-                self.setSession(self.session_template.track, self.tracks()[self.trackIndex()]);
+            if(self.guideMode != self.guide_mode.parameter){
+                self.guide.waiting();
+                var nextIndex = self.askSequence.indexOf(self.guideMode) + 1;
+                var nextIndex = nextIndex % self.askSequence.length;
+                self.showGuide(self.askSequence[nextIndex]);
+                self.behaviorWatcher.detect(self.behaviorKind.askBPM);
             }
         }
 
-        self.answer = function(answer){
+        self.showGuide = function(mode, option){
+            var isModeUpdate = true;
+
+            if(mode == self.guide_mode.pattern && self.criticize().length > 0){
+                self.setSession(self.session_template.criticize, self.criticize()[self.criticizeIndex()]);
+            }else if(mode == self.guide_mode.parameter){
+                self.setSession(self.session_template.criticize, {text: "Oh, do you like this " + option.parameter + " beat!?", option:option});
+            }else if(mode == self.guide_mode.like && self.tracks().length > 0){
+                self.setSession(self.session_template.criticize, {text: "Do you like this Track?"});
+            }else if(mode == self.guide_mode.track && self.tracks().length > 0){
+                self.setSession(self.session_template.track, self.tracks()[self.trackIndex()]);
+            }else if(mode == self.guide_mode.reload){
+                self.setSession(self.session_template.criticize, {text: "Shall I show another tracks?"});
+            }else{
+                isModeUpdate = false;
+            }
+
+            if(isModeUpdate){
+                self.guideMode = mode;
+            }
+        }
+
+        self.answer = function(answer, option){
             if(answer){
                 var data = {
                     track_id: self.tracks()[self.trackIndex()].id
                 };
 
-                if(self.guideMode == self.guide_mode.taste){
-                    data.criticize_type = self.criticize_type.taste;
-                }else if(self.guideMode == self.guide_mode.proposed){
-                    data.criticize_type = self.criticize_type.proposed;
-                    data.value = self.criticize()[self.criticizeIndex()].pattern;
+                switch(self.guideMode){
+                    case self.guide_mode.like:
+                        data.criticize_type = self.criticize_type.like;
+                        self.doCriticize(data);
+                        break;
+                    case self.guide_mode.pattern:
+                        data.criticize_type = self.criticize_type.pattern;
+                        data.value = self.criticize()[self.criticizeIndex()].pattern;
+                        self.doCriticize(data);
+                        break;
+                    case self.guide_mode.parameter:
+                        data.criticize_type = self.criticize_type.parameter;
+                        data.value = option.parameter;
+                        self.doCriticize(data);
+                        break;
+                    case self.guide_mode.reload:
+                        self.getTracks("Ok, I show new tracks that you will like.");
                 }
-
-                self.load("POST", data, function(error){
-                    if(error){
-                        self.isRetry(true);
-                        self.guide.confuse();
-                        self.setSession(self.session_template.message,
-                           {message: "Oops, server cause error.\nPlease try again."});
-                    }
-                });
 
             }else{
-                if(self.guideMode == self.guide_mode.proposed){
-                    var next = self.criticizeIndex() + 1;
-                    if(next >= self.criticizeIndex().length){
-                        next = 0;
-                    }
-                    self.criticizeIndex(next);
-                    self.showGuide(self.guide_mode.proposed);
-                }else{
-                    self.ask();
+                switch(self.guideMode){
+                    case self.guide_mode.pattern:
+                        var next = self.criticizeIndex() + 1;
+                        if(next >= self.criticizeIndex().length){
+                            next = 0;
+                        }
+                        self.criticizeIndex(next);
+                        self.showGuide(self.guide_mode.pattern);
+                        break;
+                    default:
+                        self.guide.waiting(true);
+                        self.setSession(self.session_template.message,
+                            {message: "OK. Please ask me whenever you need."});
+                        setTimeout(function(){
+                            self.showGuide(self.guide_mode.track);
+                        }, 2000);
+                        break;
                 }
             }
+        }
+
+        self.doCriticize = function(data){
+            self.setSession(self.session_template.message,
+               {message: "Ok, I show new tracks that you will like."});
+            self.guide.thinking(true);
+
+            self.load("POST", data, function(error){
+                if(!error){
+                    self.guide.waiting(true);
+                    self.setSession(self.session_template.message,
+                       {message: "Here the tracks, please listen to it."});
+                }else{
+                    self.isRetry(true);
+                    self.guide.confusing();
+                    self.setSession(self.session_template.message,
+                       {message: "Oops, server cause error.\nPlease try again."});
+                }
+            });
         }
 
         /*
@@ -235,11 +318,16 @@ $(function(){
          */
         self.widgetPlay = function(){
             if(self.isPlaying()){
-              self._widget.pause();
+                self._widget.pause();
             }else{
-              self._widget.play();
+                self._widget.play();
             }
             self.isPlaying(!self.isPlaying());
+        }
+
+        self.widgetRepeat = function(){
+            self._widget.seekTo(0);
+            self._widget.play();
         }
 
         self.widgetMove = function(isNext){
@@ -256,6 +344,7 @@ $(function(){
                 index = self.tracks().length - 1;
             }
 
+            self.behaviorWatcher.resetHandler(self.behaviorKind.askAboutTrack, 0);
             self.trackIndex(index);
             self.widgetLoadByIndex();
         }
@@ -289,12 +378,21 @@ $(function(){
             if(self._widget == null){
                 self._widget = initWidget(url);
                 self._widget.bind(SC.Widget.Events["PLAY"],function(){
+                    self.behaviorWatcher.resetHandler(self.behaviorKind.askAboutTrack, 0);
                     self.isPlaying(true);
                 })
                 self._widget.bind(SC.Widget.Events["PAUSE"],function(){
                     self.isPlaying(false);
+                    self.behaviorWatcher.resetHandler(self.behaviorKind.askAboutTrack, 0);
                 })
-
+                self._widget.bind(SC.Widget.Events["PLAY_PROGRESS"],function(){
+                    var pos = self._widget.getPosition();
+                    self._widget.getPosition(function(value){
+                        if(value < 30000){
+                            self.behaviorWatcher.detect(self.behaviorKind.askAboutTrack);
+                        }
+                    })
+                })
             }
 
             if(isAutoLoad){
