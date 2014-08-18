@@ -27,15 +27,11 @@ class EvaluateItem(object):
         self.release_date = release_date
         return self
 
-    @classmethod
-    def print_title(cls, title):
-        print("--" + title + "-------------------------------------------")
-
 
 def print_title(test_case):
 
     def wrapper(*args, **kwargs):
-        print("--@" + test_case.__name__ + "-------------------------------------------")
+        print("@" + test_case.__name__ + "-------------------------------------------")
         return test_case(*args, **kwargs)
 
     return wrapper

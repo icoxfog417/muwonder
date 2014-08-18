@@ -13,7 +13,7 @@ class TrackCriticizeType(enum.Enum):
 
 class TrackCriticize(object):
 
-    def __init__(self, track_id, criticize_type, values={}):
+    def __init__(self, track_id, criticize_type, value={}):
         self.track_id = track_id
         self._track = None
 
@@ -24,7 +24,11 @@ class TrackCriticize(object):
         else:
             self.criticize_type = TrackCriticizeType(int(criticize_type))
 
-        self.values = values
+        self.value = value
+
+    def set_track(self, track):
+        self.track_id = track.id
+        self._track = track
 
     def get_track(self, track_id=None):
         track = None
@@ -46,6 +50,21 @@ class TrackCriticize(object):
 
         return track
 
+    def is_fit_criticize(self, target):
+        base = self.get_track()
+        if self.criticize_type == TrackCriticizeType.Pattern:
+            cp = CriticizePattern(pattern=self.value)
+            return cp.is_fit_pattern(base, target)
+        else:
+            params = self.make_parameters()
+            result = False
+            for key in params:
+                if params[key]:
+                    if self.__adjust(key, params[key], False) <= params[key] <= self.__adjust(key, params[key], True):
+                        result = True
+
+            return result
+
     @classmethod
     def __get_criticizable(cls):
         return ["bpm", "genre", "created_at"]
@@ -57,15 +76,15 @@ class TrackCriticize(object):
         else:
             target_track = self.get_track()
             if not target_track:
-                raise Exception("Track " + self.track_id + " is not found ")
+                raise Exception("Track " + str(self.track_id) + " is not found ")
 
         parameters = {}
         if self.criticize_type == TrackCriticizeType.Parameter:
-            if "bpm" in self.values:
-                parameters["bpm"] = self.values["bpm"]
+            if "bpm" in self.value:
+                parameters["bpm"] = self.value["bpm"]
 
         elif self.criticize_type == TrackCriticizeType.Pattern:
-            criticize = CriticizePattern(pattern=self.values)
+            criticize = CriticizePattern(pattern=self.value)
             for c in criticize.get_targets():
                 if c.name in self.__get_criticizable():
                     target_value = getattr(target_track, c.name)
@@ -76,51 +95,51 @@ class TrackCriticize(object):
                 target_value = getattr(target_track, c)
                 parameters[c] = target_value
 
+        if "genre" in parameters and Track.genre_to_score(parameters["genre"]):
+            g_score = Track.genre_to_score(parameters["genre"])
+            parameters["genre_score"] = g_score
+
         return parameters
 
-    def adjust_parameter(self, direction, bpm=None, genre=None, created_at=None):
-        adjusted = {}
-        if bpm:
-            if direction == CriticizeDirection.Up:
-                adjusted["bpm"] = {"from": str(bpm + 20)}
-            elif direction == CriticizeDirection.Down:
-                adjusted["bpm"] = {"to": str(bpm - 20)}
-            else:
-                adjusted["bpm"] = {"from": str(bpm - 20), "to": str(bpm + 20)}
-
-        if genre:
-            adjusted["genre"] = genre
-            if Track.genre_to_score(genre):
-                g_score = Track.genre_to_score(genre)
-                if direction == CriticizeDirection.Up:
-                    g_score += 0.1
-                elif direction == CriticizeDirection.Down:
-                    g_score -= 0.1
-
-                adjusted["genre_score"] = g_score
-
-        if created_at:
-            base_date = created_at
-            if direction == CriticizeDirection.Up:
-                base_date = base_date + timedelta(days=180)
-            elif direction == CriticizeDirection.Down:
-                base_date = base_date + timedelta(days=180)
-
-            if base_date > datetime.now():
-                base_date = datetime.now() - timedelta(days=90)
-
-            adjusted["created_at"] = {"from": base_date.strftime("%Y-%m-%d %H:%M:%S")}
-
-        return adjusted
-
-    def to_conditions(self):
+    def make_conditions(self):
         parameters = self.make_parameters()
+        default_condition = self.get_default_conditions()
+
         direction = CriticizeDirection.Around
         if self.criticize_type == TrackCriticizeType.Pattern:
-            direction = TrackCriticizePattern(pattern=self.values).get_direction()
+            direction = TrackCriticizePattern(pattern=self.value).get_direction()
 
-        c_dict = self.adjust_parameter(direction, **parameters)
-        default_condition = self.get_default_conditions()
+        c_dict = {}
+        is_condition_set = False
+        for key in self.__get_criticizable() + ["genre_score"]:
+            if key in parameters and parameters[key]:
+                value = parameters[key]
+                is_condition_set = True
+                if key == "bpm":
+                    value = int(value)
+                    if direction == CriticizeDirection.Up:
+                        c_dict[key] = {"from": self.__adjust(key, value, True)}
+                    elif direction == CriticizeDirection.Down:
+                        c_dict[key] = {"to": self.__adjust(key, value, False)}
+                    else:
+                        c_dict[key] = {"from": self.__adjust(key, value, False), "to": self.__adjust(key, value, True)}
+
+                elif key == "genre":
+                    c_dict[key] = value
+
+                elif key == "genre_score":
+                    if direction == CriticizeDirection.Up:
+                        c_dict[key] = self.__adjust(key, value, True)
+                    elif direction == CriticizeDirection.Down:
+                        c_dict[key] = self.__adjust(key, value, False)
+
+                elif key == "created_at":
+                    if direction == CriticizeDirection.Up:
+                        value = self.__adjust(key, value, True)
+                    elif direction == CriticizeDirection.Down:
+                        value = self.__adjust(key, value, False)
+
+                    c_dict[key] = {"from": value.strftime("%Y-%m-%d %H:%M:%S")}
 
         if "genre_score" in c_dict:
             genres = Track.get_genres()
@@ -128,14 +147,46 @@ class TrackCriticize(object):
             # when condition, name is "genres"
             c_dict["genres"] = u",".join(sorted(genres, key=lambda k: abs(genres[k] - g_score))[:3])
             c_dict.pop("genre_score")
+        elif "genre" in c_dict:
+            c_dict["genres"] = c_dict["genre"]
 
         if "genre" in c_dict:
-            c_dict["genres"] = c_dict["genre"]
             c_dict.pop("genre")
 
-        c_dict["filter"] = default_condition["filter"]
+        if is_condition_set:
+            c_dict["filter"] = default_condition["filter"]
+        else:
+            c_dict = default_condition
 
         return c_dict
+
+    def __adjust(self,parameter_name, value, is_up):
+        result = None
+        if not value:
+            return None
+
+        if parameter_name == "bpm":
+            if is_up:
+                result = value + 20
+            else:
+                result = value - 20
+
+        if parameter_name == "genre_score":
+            if is_up:
+                result = value + 0.1
+            else:
+                result = value - 0.1
+
+        if parameter_name == "created_at":
+            if is_up:
+                result = value + timedelta(days=180)
+            else:
+                result = value - timedelta(days=180)
+
+            if result > datetime.now():
+                result = datetime.now() - timedelta(days=90)
+
+        return result
 
     @classmethod
     def get_default_conditions(cls):

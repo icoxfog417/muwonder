@@ -1,32 +1,57 @@
-from django.http import HttpResponse, HttpResponseNotFound
+from django.http import HttpResponse
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.shortcuts import render
-from soundcloudapi.models import Track, TrackCriticize, TrackCriticizePattern
+from urllib2 import HTTPError
+from time import sleep
 import json
+import random
+from soundcloudapi.models import Track, TrackCriticize, TrackCriticizePattern
 
 
 class RecommendApi(object):
-
-    SESSION_STORE_KEY = "SESSION_STORE_KEY"
+    TRACK_COUNT_BASE = 100
+    TRACK_TRIAL_LIMIT = 3
 
     def __init__(self):
         pass
 
     @classmethod
-    def get_session(cls, request):
-        if request.session.get(cls.SESSION_STORE_KEY, False):
-            return request.session.get(cls.SESSION_STORE_KEY)
+    def recommends(cls, request):
+        criticize = None
+        limit = 20  # todo:get limit by parameter
+
+        # need try catch statement
+        if request.method == "POST":
+            criticize = cls.make_criticize(request.POST)
+            SessionManager.add_session(request, SessionManager.CRITICIZE_SESSION, criticize.make_conditions())
         else:
-            return []
+            # initialize when get
+            SessionManager.set_session(request, SessionManager.CRITICIZE_SESSION, [])
+            SessionManager.set_session(request, SessionManager.TRACK_SESSION, [])
 
-    @classmethod
-    def add_session(cls, request, criticize):
-        cs = request.session.get(cls.SESSION_STORE_KEY, False)
-        if not cs:
-            cs = []
+        # get from session
+        history = SessionManager.get_session(request, SessionManager.CRITICIZE_SESSION)
+        tracks = SessionManager.get_session(request, SessionManager.TRACK_SESSION)
+        tracks = Track().load_dict(tracks)  # deserialization
 
-        cs.append(criticize.values)
-        request.session[cls.SESSION_STORE_KEY] = cs
+        # load tracks if criticism is none
+        if not criticize:
+            tracks = cls.get_tracks(criticize, history, tracks)
+
+        # evaluate tracks
+        evaluated = cls.evaluate(tracks, criticize, history)
+
+        # to dictionary
+        serialized_evaluated = map(lambda s: {"score": s.score, "item": s.item.to_dict(), "score_detail": s.score_detail}, evaluated)
+
+        # store to session
+        SessionManager.set_session(request, SessionManager.TRACK_SESSION, map(lambda s: s["item"], serialized_evaluated))
+
+        if limit > 0:
+            serialized_evaluated = serialized_evaluated[:limit]
+
+        jsonized = json.dumps(serialized_evaluated)
+        return HttpResponse(jsonized, content_type="application/json")
 
     @classmethod
     def make_criticize(cls, posted):
@@ -40,55 +65,110 @@ class RecommendApi(object):
             raise Exception("Can not create criticize by POST data. track_id or criticizy_type parameter is missing")
 
     @classmethod
-    def dispatch(cls, request):
-        criticize = None
-        limit = 20  # todo:get limit by parameter
+    def get_tracks(cls, criticize, history=None, initial_tracks=None):
+        track = Track()
+        tracks = initial_tracks
+        trial_count = 0
 
-        # need try catch statement
-        if request.method == "POST":
-            criticize = cls.make_criticize(request.POST)
-            cls.add_session(request, criticize)
+        while trial_count < RecommendApi.TRACK_TRIAL_LIMIT or len(tracks) <= RecommendApi.TRACK_COUNT_BASE:
+            try:
+                # get tracks by criticizes
+                condition = TrackCriticize.get_default_conditions() if not criticize else criticize.make_conditions()
+                if len(tracks) > 0:
+                    condition["offset"] = len(tracks)
 
-        history = cls.get_session(request)
-        result = cls.evaluate(criticize, history)
+                new_tracks = track.find(condition)
+                tracks += filter(lambda t: t.id not in [t.id for t in tracks], new_tracks)
+            except HTTPError as ex:
+                pass
 
-        if limit > 0:
-            result["tracks"] = result["tracks"][:limit]
-            result["criticize"] = result["criticize"][:limit]
+            trial_count += 1
+            sleep(0.5)
 
-        jsonized = json.dumps(result)
-        return HttpResponse(jsonized, content_type="application/json")
+        tracks = tracks[:RecommendApi.TRACK_COUNT_BASE]
+
+        return tracks
 
     @classmethod
-    def evaluate(cls, criticize, history=None):
-        track = Track()
-
-        # get tracks by criticizes
-        condition = TrackCriticize.get_default_conditions() if not criticize else criticize.to_conditions()
-        tracks = track.find(condition)
-
+    def evaluate(cls, tracks, criticize, history=None):
+        evaluator = Track.make_evaluator(TrackCriticizePattern)
         selected = None
+        chosen_tracks = list(tracks)
+
         if criticize:
-            selected = Track(criticize.get_track())
-        elif len(tracks) > 0:
-            selected = tracks[0]
+            # filter by criticize
+            selected = next(iter(filter(lambda t: t.id == criticize.track_id, tracks)), None)
+            chosen_tracks = filter(lambda t: criticize.is_fit_criticize(t), tracks)
 
-        result = {"tracks": [], "criticize": []}
-        if selected:
-            # evaluate tracks
-            evaluator = Track.make_evaluator(TrackCriticizePattern)
-            tracks_evaluated = evaluator.calc_score(tracks, selected)
+            #todo blush up how to load tracks
+            if len(chosen_tracks) == 0:
+                chosen_tracks = cls.get_tracks(criticize, history)
 
-            # criticize patterns
-            patterns = evaluator.make_pattern(tracks, selected)
-            pattern_list = map(lambda p: p.to_dict(), patterns)
+        else:
+            selected = random.sample(tracks, 1)[0]
 
-            serialized_tracks = map(lambda scored: scored.item.to_dict(), tracks_evaluated)
-            result["tracks"] = serialized_tracks
-            result["criticize"] = pattern_list
+        tracks_evaluated = evaluator.calc_score(chosen_tracks, selected)
 
-        return result
+        return tracks_evaluated
 
+    @classmethod
+    def get_criticize_pattern(cls, request):
+        if request.method == "POST":
+            track_id = request.POST.get(u"track_id")
+
+            tracks = SessionManager.get_session(request, SessionManager.TRACK_SESSION)
+            tracks = Track().load_dict(tracks)  # deserialization
+
+            limit = 3   #todo receive it from parameter
+
+            patterns = cls.make_criticize_pattern(track_id, tracks)
+            serialized_patterns = map(lambda c: c.to_dict(), patterns[:limit])
+
+            jsonized = json.dumps(serialized_patterns)
+            return HttpResponse(jsonized, content_type="application/json")
+        else:
+            raise Exception("you have to use POST method when access the get_criticize_pattern.")
+
+    @classmethod
+    def make_criticize_pattern(cls, target_track_id, tracks):
+        criticize = TrackCriticize(target_track_id, 0)
+
+        track = next(iter(filter(lambda t: t.id == target_track_id, tracks)), None)
+        if track is None:
+            track = criticize.get_track()
+
+        evaluator = Track.make_evaluator(TrackCriticizePattern)
+        criticize_patterns = evaluator.make_pattern(tracks, track)
+
+        return criticize_patterns
+
+
+class SessionManager(object):
+    CRITICIZE_SESSION = "CRITICIZE_STORE_KEY"
+    TRACK_SESSION = "TRACK_STORE_KEY"
+
+    def __init__(self):
+        pass
+
+    @classmethod
+    def get_session(cls, request, key):
+        if request.session.get(key, False):
+            return request.session.get(key)
+        else:
+            return []
+
+    @classmethod
+    def add_session(cls, request, key, value):
+        cs = request.session.get(key, False)
+        if not cs:
+            cs = []
+
+        cs.append(value)
+        request.session[key] = cs
+
+    @classmethod
+    def set_session(cls, request, key, value):
+        request.session[key] = value
 
 # Create your views here.
 @ensure_csrf_cookie

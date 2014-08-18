@@ -5,7 +5,8 @@ import soundcloud
 import secret_settings
 from datetime import datetime
 from knowbre.item_evaluator import ItemEvaluator, EvaluationType
-from soundcloudapi.models import JsonSerializable, SoundCloudResource
+from json_serialiable import JsonSerializable
+from soundcloud_resource import SoundCloudResource
 
 
 # Create your models here.
@@ -29,7 +30,7 @@ class Track(JsonSerializable):
         self.artwork_url = ""
         self.description = ""
         self.genre = ""
-        self.genre_score = lambda: next(iter(filter(None, map(lambda v: self.genre_to_score(v), self.genre.split(",")))), None)
+        self.genre_score = lambda: self.genre_to_score(self.genre + u" " + self.tag_list)
         self.tag_list = []
         self.track_type = ""
         self.bpm = 0
@@ -53,6 +54,7 @@ class Track(JsonSerializable):
         self.title = item.title
         self.permalink_url = item.permalink_url
         self.description = item.description
+        self.genre = item.genre if item.genre else u""
         self.tag_list = item.tag_list
         self.track_type = item.track_type
         self.bpm = item.bpm
@@ -64,7 +66,6 @@ class Track(JsonSerializable):
         if isinstance(item, Track):
             self.created_at = item.created_at
             self.artwork_url = item.artwork_url
-            self.genre = item.genre if item.genre else ""
         else:
             self.created_at = datetime.strptime(" ".join(item.created_at.split(" ")[0:2]), '%Y/%m/%d %H:%M:%S')
             if item.artwork_url:
@@ -74,11 +75,9 @@ class Track(JsonSerializable):
             else:
                 self.artwork_url = static("soundcloudapi/images/soundcloud_default.png")
 
-            self.genre = item.genre if item.genre else ""
-
     @classmethod
-    def make_evaluator(cls, session=None):
-        evaluator = ItemEvaluator()
+    def make_evaluator(cls, pattern_type, history=None):
+        evaluator = ItemEvaluator(pattern_type)
         evaluator.set_rule("elapsed", EvaluationType.LessIsBetter)
         evaluator.set_rule("genre_score", EvaluationType.NearIsBetter)
         evaluator.set_rule("bpm", EvaluationType.NearIsBetter)
@@ -87,7 +86,7 @@ class Track(JsonSerializable):
         evaluator.set_rule("playback_count", EvaluationType.MoreIsBetter)
         evaluator.set_rule("favoritings_count", EvaluationType.MoreIsBetter)
 
-        # set weight by session
+        # set weight by history
 
         return evaluator
 
@@ -113,11 +112,35 @@ class Track(JsonSerializable):
 
     @classmethod
     def genre_to_score(cls, genre):
+        score = None
         genres = cls.get_genres()
-        if genre in genres:
-            return genres[genre]
+        target_genre = genre.lower().strip()
+
+        def get_score(word):
+            s = None
+            for w in [word, word.replace(u"-", u" ")]:
+                if word in genres:
+                    s = genres[w]
+                else:
+                    hits = filter(lambda g: g.find(word) > -1, genres)
+                    if len(hits) > 0:
+                        s = genres[hits[0]]
+
+                    rev_hits = filter(lambda g: word.find(g) > -1, genres)
+                    if len(rev_hits) > 0:
+                        s = genres[rev_hits[0]]
+            return s
+
+        if target_genre in genres:
+            score = genres[target_genre]
         else:
-            return None
+            genre_words = target_genre.split(u",")
+            for genre_word in genre_words:
+                score = get_score(genre_word.strip())
+                if score:
+                    break
+
+        return score
 
     @classmethod
     def get_genres(cls):
@@ -135,11 +158,13 @@ class Track(JsonSerializable):
             u"soul": 0.6,
             u"latin": 0.55,
             u"reggae": 0.5,
+            u"dj": 0.45,
             u"hardcore techno": 0.4,
             u"techno": 0.39,
             u"trance": 0.38,
             u"minimal techno": 0.36,
             u"tech house": 0.35,
+            u"remix": 0.33,
             u"electro": 0.31,
             u"electronic": 0.3,
             u"alternative rock": 0.2,

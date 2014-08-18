@@ -165,8 +165,13 @@ class ItemEvaluator(object):
 
         for a in attributes:
             name = a
-            attribute_values = vector_manager.to_vector(name, item_list)
             selected_value = vector_manager.to_vector(name, [selected_item])[0]
+
+            # don't use None or empty value to create criticize pattern
+            if not selected_value:
+                continue
+
+            attribute_values = vector_manager.to_vector(name, item_list)
             pt_keys.append(name)
             if length == 0:
                 length = len(item_list)

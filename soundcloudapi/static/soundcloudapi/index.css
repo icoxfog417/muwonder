@@ -53,8 +53,12 @@ html, button, input, select, textarea,
     height: auto;
 }
 
-#tracks{
-    overflow:auto;
+
+
+.track-header{
+    border-left: 5px solid gray;
+    padding-left: 5px;
+    margin-bottom: 10px;
 }
 
 .track{
@@ -71,6 +75,11 @@ html, button, input, select, textarea,
 
 .track.active img{
     border-left:5px solid rgb(240,70,0);
+}
+
+.like {
+    background-color:coral;
+    color:white;
 }
 
 /*
@@ -211,23 +220,19 @@ iframe {
  .arrow_box {
     padding:10px;
     margin-bottom:15px;
- }
-
- .message{
-    min-height:110px;
-    max-height:200px;
-    overflow:auto;
+    border-radius:15px;
  }
 
 .message .title{
     margin-top: 5px;
     margin-bottom: 15px;
     font-weight: bold;
+    color:#333;
 }
 
-.arrow_box .message pre{
+.message pre{
     font-family:"Hiragino Kaku Gothic ProN", Meiryo, sans-serif !important;
 }
-.arrow_box .message a{
+.message a{
     color:#7f8c8d;
 }

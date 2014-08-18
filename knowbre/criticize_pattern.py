@@ -22,6 +22,9 @@ class CriticizePattern(object):
 
     def is_fit_pattern(self, base_item, target_item):
         is_fit = []
+        if base_item is None or target_item is None:
+            return False
+
         for p in self.get_targets():
             base_value = vector_manager.to_value(getattr(base_item, p.name))
             target_value = vector_manager.to_value(getattr(target_item, p.name))

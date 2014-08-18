@@ -4,5 +4,6 @@ from soundcloudapi import views
 urlpatterns = patterns(
     '',
     url(r'^$', views.index, name="index"),
-    url(r'^recommends/$', views.RecommendApi.dispatch)
+    url(r'^recommends/$', views.RecommendApi.recommends),
+    url(r'^criticize_pattern/$', views.RecommendApi.get_criticize_pattern)
 )
