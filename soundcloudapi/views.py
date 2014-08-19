@@ -65,7 +65,7 @@ class RecommendApi(object):
             raise Exception("Can not create criticize by POST data. track_id or criticizy_type parameter is missing")
 
     @classmethod
-    def get_tracks(cls, criticize, history=None, initial_tracks=None):
+    def get_tracks(cls, criticize, history, initial_tracks):
         track = Track()
         tracks = initial_tracks
         trial_count = 0
@@ -90,19 +90,19 @@ class RecommendApi(object):
         return tracks
 
     @classmethod
-    def evaluate(cls, tracks, criticize, history=None):
+    def evaluate(cls, tracks, criticize, history=[]):
         evaluator = Track.make_evaluator(TrackCriticizePattern)
         selected = None
         chosen_tracks = list(tracks)
 
         if criticize:
             # filter by criticize
-            selected = next(iter(filter(lambda t: t.id == criticize.track_id, tracks)), None)
+            selected = next(iter(filter(lambda t: t.id == int(criticize.track_id), tracks)), None)
             chosen_tracks = filter(lambda t: criticize.is_fit_criticize(t), tracks)
 
             #todo blush up how to load tracks
-            if len(chosen_tracks) == 0:
-                chosen_tracks = cls.get_tracks(criticize, history)
+            if len(chosen_tracks) <= 5:
+                chosen_tracks += cls.get_tracks(criticize, history, [])
 
         else:
             selected = random.sample(tracks, 1)[0]

@@ -29,7 +29,7 @@
         <div id="tracks" class="pure-u-1-4 main">
             <div data-bind="foreach: observeTrackList()" style="height:100%;overflow:auto">
                 <div data-bind="attr: {'class': $root.trackStyle($index()) }, click:function(){ $root.widgetLoadByIndex($index()) }">
-                    <img style="float:left;" data-bind="attr: { src: item.artwork_url }" />
+                    <img class="pure-img" style="float:left;" data-bind="attr: { src: item.artwork_url }" />
                     <div style="float:left;font-size:15px;margin-left:10px;" data-bind="visible: $root.getLikedIndex(item.id) > -1">
                         <i class="fa fa-heart" style="color:coral"></i>
                     </div>
@@ -65,8 +65,12 @@
     <div id="footer" >
         <div class="pure-g container" >
             <div class="pure-u-1-6" style="padding-left:3px;">
-                <button class="pure-button like" id="btnToFavorite" data-bind="click:toggleListMode, visible: listMode() == content_mode.track" ><i class="fa fa-chevron-circle-left"></i>&nbsp;Likes</button>
-                <button class="pure-button" id="btnToTrack" data-bind="click:toggleListMode, visible: listMode() == content_mode.like "><i class="fa fa-chevron-circle-right"></i>&nbsp;Tracks</button>
+                <button class="pure-button like" id="btnToFavorite" data-bind="click:toggleListMode, visible: listMode() == content_mode.track" >
+                    <i class="fa fa-chevron-circle-left"></i><span class="display-none-under-middle" >&nbsp;Likes</span>
+                </button>
+                <button class="pure-button" id="btnToTrack" data-bind="click:toggleListMode, visible: listMode() == content_mode.like ">
+                    <i class="fa fa-chevron-circle-right"></i><span class="display-none-under-middle" >&nbsp;Tracks</span>
+                </button>
             </div>
             <div class="pure-u-1-6" style="padding-right:3px;">
                 <button  class="pure-button" data-bind="click: $root.toggleLike" style="background-color:coral;color:white"><i class="fa fa-heart"></i></button>

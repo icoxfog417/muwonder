@@ -1,6 +1,6 @@
 import enum
 from datetime import datetime, timedelta
-from knowbre import CriticizePattern, CriticizeDirection
+from knowbre import CriticizePattern, CriticizeDirection, vector_manager
 from soundcloudapi.models import Track
 import random
 
@@ -57,17 +57,22 @@ class TrackCriticize(object):
             return cp.is_fit_pattern(base, target)
         else:
             params = self.make_parameters()
-            result = False
+            result = True
             for key in params:
-                if params[key]:
-                    if self.__adjust(key, params[key], False) <= params[key] <= self.__adjust(key, params[key], True):
-                        result = True
+                target_value = vector_manager.to_value(target.__dict__[key])
+                if params[key] is not None and target_value is not None and key in self.__get_comparable():
+                    if not (self.__adjust(key, params[key], False) <= target_value <= self.__adjust(key, params[key], True)):
+                        result = False
 
             return result
 
     @classmethod
     def __get_criticizable(cls):
         return ["bpm", "genre", "created_at"]
+
+    @classmethod
+    def __get_comparable(cls):
+        return ["bpm", "genre_score", "created_at", "comment_count", "download_count", "playback_count", "favoritings_count"]
 
     def make_parameters(self):
         target_track = None
@@ -91,9 +96,9 @@ class TrackCriticize(object):
                     parameters[c.name] = target_value
 
         elif self.criticize_type == TrackCriticizeType.Like:
-            for c in self.__get_criticizable():
+            for c in self.__get_comparable():
                 target_value = getattr(target_track, c)
-                parameters[c] = target_value
+                parameters[c] = vector_manager.to_value(target_value)
 
         if "genre" in parameters and Track.genre_to_score(parameters["genre"]):
             g_score = Track.genre_to_score(parameters["genre"])
@@ -112,7 +117,7 @@ class TrackCriticize(object):
         c_dict = {}
         is_condition_set = False
         for key in self.__get_criticizable() + ["genre_score"]:
-            if key in parameters and parameters[key]:
+            if key in parameters and parameters[key] is not None:
                 value = parameters[key]
                 is_condition_set = True
                 if key == "bpm":
@@ -132,6 +137,8 @@ class TrackCriticize(object):
                         c_dict[key] = self.__adjust(key, value, True)
                     elif direction == CriticizeDirection.Down:
                         c_dict[key] = self.__adjust(key, value, False)
+                    else:
+                        c_dict[key] = value
 
                 elif key == "created_at":
                     if direction == CriticizeDirection.Up:
@@ -160,7 +167,7 @@ class TrackCriticize(object):
 
         return c_dict
 
-    def __adjust(self,parameter_name, value, is_up):
+    def __adjust(self, parameter_name, value, is_up):
         result = None
         if not value:
             return None
@@ -185,6 +192,12 @@ class TrackCriticize(object):
 
             if result > datetime.now():
                 result = datetime.now() - timedelta(days=90)
+
+        if parameter_name in ["comment_count", "download_count", "playback_count", "favoritings_count"]:
+            if is_up:
+                result = value * 1.5
+            else:
+                result = value * 0.5
 
         return result
 

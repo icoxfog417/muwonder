@@ -31,8 +31,7 @@ var MuGuide = (function () {
     };
 
     MuGuide.prototype.initialize = function () {
-        this.clear();
-        clearInterval(this.interval);
+        this.clear(true);
         this.default();
     }
 
@@ -100,7 +99,7 @@ var MuGuide = (function () {
 
     MuGuide.prototype.confusing = function () {
         this.state = MuGuide.State.confusing;
-        this.clear();
+        this.clear(true);
         this.drawBody();
         this.drawMouth();
         this.drawEyeConfuse();
@@ -108,7 +107,7 @@ var MuGuide = (function () {
 
     MuGuide.prototype.sleeping = function () {
         this.state = MuGuide.State.sleeping;
-        this.clear();
+        this.clear(true);
         this.drawBody();
         this.drawMouthSleep();
         this.drawEyeClose();
@@ -116,7 +115,7 @@ var MuGuide = (function () {
 
     MuGuide.prototype.amazing = function () {
         this.state = MuGuide.State.amazing;
-        this.clear();
+        this.clear(true);
         this.drawBody("coral");
         this.drawMouthAmazing();
         this.drawEye(40,40,15);
@@ -206,7 +205,10 @@ var MuGuide = (function () {
     }
 
 
-    MuGuide.prototype.clear = function(){
+    MuGuide.prototype.clear = function(withInterval){
+        if(withInterval !== undefined){
+            clearInterval(this.interval);
+        }
         this.context.clearRect(0,0,this.canvas.width,this.canvas.height);
     }
 

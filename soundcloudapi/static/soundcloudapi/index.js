@@ -97,7 +97,7 @@ $(function(){
         self.init = function(){
             //set timeline event
             self.behaviorWatcher.subscribe(self.behaviorKind.askAboutTrack,30000,function(){
-                if(self.guideMode() == self.guide_mode.track){
+                if(self.guideMode() == self.guide_mode.none){
                     self.showGuide(self.guide_mode.like);
                 }
                 return true;
@@ -118,7 +118,7 @@ $(function(){
 
             //set timeline event
             self.behaviorWatcher.subscribeNoBehaviorHandler(30000,function(){
-                if(self.guideMode() == self.guide_mode.track){
+                if(self.guideMode() == self.guide_mode.none){
                     self.showGuide(self.guide_mode.reload);
                 }
                 return true;
@@ -135,7 +135,7 @@ $(function(){
             });
 
             self.behaviorWatcher.start();
-            self.getTracks("Let me introduce you the various genre tracks!");
+            self.getTracks("Let me recommend the musics to you!");
         }
 
         /*
@@ -146,6 +146,7 @@ $(function(){
             self.guide.thinking(true);
 
             var success = function(tracks){
+                self.guide.waiting(true);
                 if(tracks && tracks.length > 0){
                     self.listMode(self.content_mode.none);
                     self.contentMode(self.content_mode.none);
@@ -154,7 +155,6 @@ $(function(){
                       self.tracks.push(item);
                     })
 
-                    self.guide.waiting(true);
                     self.listMode(self.content_mode.track);
                     self.contentMode(self.content_mode.track);
                     self.widgetLoadByIndex(0);
@@ -215,6 +215,7 @@ $(function(){
         self.retry = function(){
             var errorOccured = self.errorStatus;
             var lastExecute = self.history[self.history.length - 1];
+             self.guide.thinking(true);
             self.load(lastExecute.target, lastExecute.method, lastExecute.data, lastExecute.success, lastExecute.error);
         }
 
@@ -235,20 +236,26 @@ $(function(){
         self.observeTrackList = ko.computed(self.getTrackList);
 
         self.drawTrackGraph = function(){
-            scores = self.tracks()[self.trackIndex()].score_detail;
+            selected = self.getSelected();
+            score = selected.score_detail;
+            genre_score = selected.item.genre_score;
+            if(!(genre_score === undefined || genre_score == null || genre_score == "")){
+                genre_score += 1; //genrescore is -1 - 1. so move base to 0
+            }
+
             var ctx = $("#trackRaderChart").get(0).getContext("2d");
             var graphData = {
-                labels: ["PlayBack", "Like", "Download", "Comments", "Recent"],
+                labels: ["Loudness", "PlayBack", "Like", "Download", "Comments", "Recent"],
                 datasets: [
                     {
-                        label: "My First dataset",
+                        label: "Track Detail",
                         fillColor: "rgba(220,220,220,0.2)",
                         strokeColor: "rgba(220,220,220,1)",
                         pointColor: "rgba(220,220,220,1)",
                         pointStrokeColor: "#fff",
                         pointHighlightFill: "#fff",
                         pointHighlightStroke: "rgba(220,220,220,1)",
-                        data: [scores.playback_count, scores.favoritings_count, scores.download_count, scores.comment_count, scores.elapsed]
+                        data: [genre_score, score.playback_count, score.favoritings_count, score.download_count, score.comment_count, score.elapsed]
                     }
                 ]
             }
@@ -364,9 +371,9 @@ $(function(){
          * for criticize
          */
         self.ask = function(){
-            self.guide.waiting();
+            self.guide.waiting(true);
             var guideSequence = [self.guide_mode.pattern, self.guide_mode.none];
-            if(self.getLikedIndex() > -1){
+            if(self.getLikedIndex() > -1 || self.isPlaying()){
                 guideSequence.unshift(self.guide_mode.like);
             }
             var guideNow = guideSequence.indexOf(self.guideMode());
@@ -416,6 +423,9 @@ $(function(){
 
                 switch(self.guideMode()){
                     case self.guide_mode.like:
+                        if(self.getLikedIndex(selected.item.id) == -1){
+                            self.toggleLike();
+                        }
                         data.criticize_type = self.criticize_type.like;
                         self.getTracks(msg, data);
                         break;
