@@ -42,6 +42,7 @@ $(function(){
         self.isPlaying = ko.observable(false);
         self.history = [];
         self.session = ko.observableArray([]);
+        self.query = ko.observable("");
 
         self.content_mode = {
             none : "none-template",
@@ -141,9 +142,17 @@ $(function(){
         /*
             server access
          */
+        self.getTracksByText = function(){
+            self.getTracks('Loading by your input ...');
+        }
+
         self.getTracks = function(message, postData){
             self.showGuide(self.guide_mode.message, {message: message});
             self.guide.thinking(true);
+            var d = (postData === undefined) ? {} : postData;
+            if(d.q === undefined){
+                d.q = self.query();
+            }
 
             var success = function(tracks){
                 self.guide.waiting(true);
@@ -168,9 +177,9 @@ $(function(){
             }
 
             if(postData === undefined){
-                self.load(self.API_RECOMMEND,  "GET", {}, success, error);
+                self.load(self.API_RECOMMEND,  "GET", d, success, error);
             }else{
-                self.load(self.API_RECOMMEND, "POST", postData, success, error);
+                self.load(self.API_RECOMMEND, "POST", d, success, error);
             }
 
         }

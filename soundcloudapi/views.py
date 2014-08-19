@@ -19,6 +19,7 @@ class RecommendApi(object):
     def recommends(cls, request):
         criticize = None
         limit = 20  # todo:get limit by parameter
+        queryOption = None
 
         # need try catch statement
         if request.method == "POST":
@@ -28,6 +29,7 @@ class RecommendApi(object):
             # initialize when get
             SessionManager.set_session(request, SessionManager.CRITICIZE_SESSION, [])
             SessionManager.set_session(request, SessionManager.TRACK_SESSION, [])
+            queryOption = {"q": request.GET.get(u"q")}
 
         # get from session
         history = SessionManager.get_session(request, SessionManager.CRITICIZE_SESSION)
@@ -36,7 +38,7 @@ class RecommendApi(object):
 
         # load tracks if criticism is none
         if not criticize:
-            tracks = cls.get_tracks(criticize, history, tracks)
+            tracks = cls.get_tracks(queryOption, history, tracks)
 
         # evaluate tracks
         evaluated = cls.evaluate(tracks, criticize, history)
@@ -58,9 +60,10 @@ class RecommendApi(object):
         track_id = posted.get(u"track_id")
         criticize_type = posted.get(u"criticize_type")
         value = posted.get(u"value")
+        query = posted.get(u"q")
 
         if track_id and criticize_type:
-            return TrackCriticize(track_id, criticize_type, value)
+            return TrackCriticize(track_id, criticize_type, value, query)
         else:
             raise Exception("Can not create criticize by POST data. track_id or criticizy_type parameter is missing")
 
@@ -69,11 +72,18 @@ class RecommendApi(object):
         track = Track()
         tracks = initial_tracks
         trial_count = 0
+        condition = None
 
-        while trial_count < RecommendApi.TRACK_TRIAL_LIMIT or len(tracks) <= RecommendApi.TRACK_COUNT_BASE:
+        if criticize is None:
+            condition = TrackCriticize.get_default_conditions()
+        elif isinstance(criticize, dict):
+            condition = criticize
+        elif isinstance(criticize, TrackCriticize):
+            condition = criticize.make_conditions()
+
+        while trial_count < RecommendApi.TRACK_TRIAL_LIMIT and len(tracks) <= RecommendApi.TRACK_COUNT_BASE:
             try:
                 # get tracks by criticizes
-                condition = TrackCriticize.get_default_conditions() if not criticize else criticize.make_conditions()
                 if len(tracks) > 0:
                     condition["offset"] = len(tracks)
 

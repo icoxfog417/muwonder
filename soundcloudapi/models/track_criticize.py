@@ -13,9 +13,10 @@ class TrackCriticizeType(enum.Enum):
 
 class TrackCriticize(object):
 
-    def __init__(self, track_id, criticize_type, value={}):
+    def __init__(self, track_id, criticize_type, value={}, query=u""):
         self.track_id = track_id
         self._track = None
+        self.query = query
 
         if isinstance(criticize_type, TrackCriticizeType):
             self.criticize_type = criticize_type
@@ -147,6 +148,10 @@ class TrackCriticize(object):
                         value = self.__adjust(key, value, False)
 
                     c_dict[key] = {"from": value.strftime("%Y-%m-%d %H:%M:%S")}
+
+        if self.query:
+            is_condition_set = True
+            c_dict["q"] = self.query
 
         if "genre_score" in c_dict:
             genres = Track.get_genres()
