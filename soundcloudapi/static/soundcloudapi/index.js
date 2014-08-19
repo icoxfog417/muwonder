@@ -28,17 +28,18 @@ $(function(){
     function mwViewModel() {
         var self = this;
         self._widget = null;
+        self.trackInWidget = null;
         self.API_RECOMMEND = "/soundcloudapi/recommends/";
         self.API_GET_PATTERN = "/soundcloudapi/criticize_pattern/";
         self.guide = new MuGuide("muguide");
         self.behaviorWatcher = new BehaviorWatcher();
 
         self.tracks = ko.observableArray([]);
+        self.liked = ko.observableArray([]);
         self.trackIndex = ko.observable(0);
         self.criticize = ko.observableArray([]);
         self.criticizeIndex = ko.observable(0);
         self.isPlaying = ko.observable(false);
-        self.liked = ko.observableArray([]);
         self.history = [];
         self.session = ko.observableArray([]);
 
@@ -143,22 +144,14 @@ $(function(){
         self.getTracks = function(message, postData){
             self.showGuide(self.guide_mode.message, {message: message});
             self.guide.thinking(true);
-            request = null;
 
-            if(postData === undefined){
-                request = self.load(self.API_RECOMMEND,  "GET", {});
-            }else{
-                request = self.load(self.API_RECOMMEND, "POST", postData);
-            }
-
-            request
-            .done(function(tracks){
+            var success = function(tracks){
                 if(tracks && tracks.length > 0){
                     self.listMode(self.content_mode.none);
                     self.contentMode(self.content_mode.none);
                     self.tracks.removeAll();
                     tracks.forEach(function(item){
-                        self.tracks.push(item);
+                      self.tracks.push(item);
                     })
 
                     self.guide.waiting(true);
@@ -167,33 +160,42 @@ $(function(){
                     self.widgetLoadByIndex(0);
                 }
                 self.guideMode(self.guide_mode.none);
-            })
-            .fail(function(error){
+            }
+
+            var error = function(error){
                 console.log(error);
                 self.showGuide(self.guide_mode.retry, {message: "Oops, server cause error.\nPlease try again."});
-            })
+            }
+
+            if(postData === undefined){
+                self.load(self.API_RECOMMEND,  "GET", {}, success, error);
+            }else{
+                self.load(self.API_RECOMMEND, "POST", postData, success, error);
+            }
+
         }
 
         self.getPatterns = function(){
             var data = {"track_id": self.tracks()[self.trackIndex()].item.id};
-            self.load(self.API_GET_PATTERN, "POST", data)
-            .done(function(patterns){
-                if(patterns && patterns.length > 0){
-                    self.criticizeIndex(0)
-                    self.criticize.removeAll();
-                    patterns.forEach(function(item){
-                        self.criticize.push(item);
-                    })
-                }
-            })
-            .fail(function(error){
+            var success = function(patterns){
+                            if(patterns && patterns.length > 0){
+                                self.criticizeIndex(0)
+                                self.criticize.removeAll();
+                                patterns.forEach(function(item){
+                                  self.criticize.push(item);
+                                })
+                            }
+                          }
+            var error = function(error){
                 console.log(error);
                 self.showGuide(self.guide_mode.retry, {message: "Oops, I couldn't get criticize patterns."});
-            })
+            }
+
+            self.load(self.API_GET_PATTERN, "POST", data, success, error);
         }
 
-        self.load = function(target, method, data){
-            self.history.push({target: target, method: method, data:data});
+        self.load = function(target, method, data, success, error){
+            self.history.push({target: target, method: method, data:data, success:success, error:error});
             if(self.history.length > 5){
                 self.history.shift()
             }
@@ -201,8 +203,19 @@ $(function(){
                 type: method,
                 data: data,
                 url: target,
-                dataType: "json"
+                dataType: "json",
+                success: success,
+                error: error
             })
+        }
+
+        /*
+         * error handler
+         */
+        self.retry = function(){
+            var errorOccured = self.errorStatus;
+            var lastExecute = self.history[self.history.length - 1];
+            self.load(lastExecute.target, lastExecute.method, lastExecute.data, lastExecute.success, lastExecute.error);
         }
 
         /*
@@ -217,7 +230,7 @@ $(function(){
                     return self.liked;
                     break;
             }
-            return [];
+            return function(){return [];};
         };
         self.observeTrackList = ko.computed(self.getTrackList);
 
@@ -245,8 +258,12 @@ $(function(){
         self.getBodyContent = ko.computed(function(){
             switch(self.contentMode()){
                 case self.content_mode.track:
-                    selected = self.tracks()[self.trackIndex()];
-                    return { name: self.content_mode.track, data: selected, afterRender:self.drawTrackGraph }
+                    selected = self.getSelected();
+                    if(selected !== undefined){
+                        return { name: self.content_mode.track, data: selected, afterRender:self.drawTrackGraph }
+                    }else{
+                        return { name: self.content_mode.none };
+                    }
                     break;
                 case self.content_mode.like:
                     return { name: self.content_mode.like, data: self.liked() }
@@ -261,6 +278,8 @@ $(function(){
                     var toIndex = self._getIndex(fromList()[index()].item.id, toList());
                     toIndex = toIndex > -1 ? toIndex : 0;
                     index(toIndex);
+                }else{
+                    index(0);
                 }
             }
 
@@ -317,8 +336,15 @@ $(function(){
         }
 
         self.toggleLike = function(){
-            var selected = self.tracks()[self.trackIndex()];
-            var trackIndex = self.getLikedIndex(selected.item.id);
+            var selected = self.getSelected();
+            var trackIndex = -1;
+            if(self.trackInWidget != null){
+                selected = self.trackInWidget;
+                trackIndex = self.getLikedIndex(selected.item.id);
+            }else if(selected !== undefined){
+                trackIndex = self.getLikedIndex(selected.item.id);
+            }
+
             if(trackIndex < 0){
                 self.liked.push(selected);
             }else{
@@ -341,7 +367,6 @@ $(function(){
             self.guide.waiting();
             var guideSequence = [self.guide_mode.pattern, self.guide_mode.none];
             if(self.getLikedIndex() > -1){
-
                 guideSequence.unshift(self.guide_mode.like);
             }
             var guideNow = guideSequence.indexOf(self.guideMode());
@@ -384,7 +409,7 @@ $(function(){
             var msg = "Ok, I show new tracks that you will like.";
 
             if(answer){
-                var selected = self.tracks()[self.trackIndex()];
+                var selected = self.getSelected();
                 var data = {
                     track_id: selected.item.id
                 };
@@ -427,16 +452,6 @@ $(function(){
         }
 
         /*
-         * error handler
-         */
-        self.retry = function(){
-            var errorOccured = self.errorStatus;
-            var lastExecute = self.history[self.history.length - 1];
-            self.load(lastExecute.target, lastExecute.method, lastExecute.data)
-
-        }
-
-        /*
          * for widget
          */
         self.widgetPlay = function(){
@@ -462,10 +477,10 @@ $(function(){
                 index -= 1;
             }
 
-            if(index >= self.tracks().length){
+            if(index >= self.getTrackList()().length){
                 index = 0;
             }else if(index < 0){
-                index = self.tracks().length - 1;
+                index = self.getTrackList()().length - 1;
             }
 
             self.behaviorWatcher.resetHandler(self.behaviorKind.askAboutTrack, 0);
@@ -476,28 +491,18 @@ $(function(){
         self.widgetLoadByIndex = function(index){
             var track = null;
             if(index > -1){
-                track = self.tracks()[index].item;
+                track = self.getTrackList()()[index];
                 self.trackIndex(index);
             }else{
-                track = self.tracks()[self.trackIndex()].item;
+                track = self.getSelected();
             }
-            /*
-            var indexOfTrackInfo = -1;
-            for(var i = 0; i < self.session().length;i++){
-                if(self.session()[i].template == self.session_template.track){
-                    indexOfTrackInfo = i;
-                    break;
-                }
-            }
-
-            if(indexOfTrackInfo > -1){
-                self.session.splice(indexOfTrackInfo, 1);
-            }*/
-            self.widgetLoad(track.permalink_url, self.isPlaying());
+            self.widgetLoad(track, self.isPlaying());
             self.getPatterns();
         }
 
-        self.widgetLoad = function(url, isAutoLoad){
+        self.widgetLoad = function(track, isAutoLoad){
+            var url = track.item.permalink_url;
+            self.trackInWidget = track;
             if(self._widget == null){
                 self._widget = initWidget(url);
                 self._widget.bind(SC.Widget.Events["PLAY"],function(){
