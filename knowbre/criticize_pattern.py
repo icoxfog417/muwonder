@@ -1,4 +1,4 @@
-import vector_manager
+import vector_utils
 from criticize_target import CriticizeDirection, CriticizeTarget
 
 
@@ -26,8 +26,8 @@ class CriticizePattern(object):
             return False
 
         for p in self.get_targets():
-            base_value = vector_manager.to_value(getattr(base_item, p.name))
-            target_value = vector_manager.to_value(getattr(target_item, p.name))
+            base_value = vector_utils.to_value(getattr(base_item, p.name))
+            target_value = vector_utils.to_value(getattr(target_item, p.name))
             if target_value > base_value:
                 is_fit.append(1)
             elif target_value < base_value:

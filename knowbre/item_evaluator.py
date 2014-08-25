@@ -2,9 +2,10 @@
 from __future__ import division
 import inspect
 import itertools
+import math
 import enum
 from collections import Counter
-import vector_manager
+import vector_utils
 from criticize_pattern import CriticizePattern
 
 
@@ -12,6 +13,7 @@ class EvaluationType(enum.Enum):
     MoreIsBetter = 0
     LessIsBetter = 1
     NearIsBetter = 2
+    TextTokens = 3
 
 
 class ItemEvaluator(object):
@@ -37,6 +39,8 @@ class ItemEvaluator(object):
                 self.__rules[key_or_dict] = self.calc_less_is_better
             elif rule == EvaluationType.NearIsBetter:
                 self.__rules[key_or_dict] = self.calc_near_is_better
+            elif rule == EvaluationType.TextTokens:
+                self.__rules[key_or_dict] = self.calc_text_token_distance
         else:
             self.__rules[key_or_dict] = rule
 
@@ -49,15 +53,16 @@ class ItemEvaluator(object):
     @classmethod
     def __normalize(cls, values, normalize_value_type="", prop=None):
         normalized = []
-        if len(filter(None, values)) == 0:
+        without_none = [x for x in values if x is not None]
+        if len(without_none) == 0:
             return map(lambda nn: None, values)
 
-        value_max = max(filter(None, values))
-        value_min = min(filter(None, values))
+        value_max = max(without_none)
+        value_min = min(without_none)
         value_range = value_max - value_min
         if value_max == value_min:
             value_range = 1
-        value = vector_manager.to_value(prop)
+        value = vector_utils.to_value(prop)
 
         if value:
             normalized = map(lambda v: (v - value) / value_range if v is not None else None, values)
@@ -66,8 +71,7 @@ class ItemEvaluator(object):
         elif normalize_value_type == "min":
             normalized = map(lambda v: (v - value_min) / value_range if v is not None else None, values)
         else:
-            v_without_empty = filter(None, values)
-            mean = reduce(lambda a, b: a + b, v_without_empty) / len(v_without_empty)
+            mean = reduce(lambda a, b: a + b, without_none) / len(without_none)
             normalized = map(lambda v: (v - mean) / value_range if v is not None else None, values)
 
         return normalized
@@ -78,22 +82,38 @@ class ItemEvaluator(object):
 
     @classmethod
     def calc_more_is_better(cls, attr_name, item_list, selected_item=None):
-        values = vector_manager.to_vector(attr_name, item_list)
+        values = vector_utils.to_vector(attr_name, item_list)
         return cls.__normalize(values, normalize_value_type="min")
 
     @classmethod
     def calc_less_is_better(cls, attr_name, item_list, selected_item=None):
-        values = vector_manager.to_vector(attr_name, item_list)
+        values = vector_utils.to_vector(attr_name, item_list)
         return cls.__normalize(values, normalize_value_type="max")
 
     @classmethod
     def calc_near_is_better(cls, attr_name, item_list, selected_item):
         if selected_item and getattr(selected_item, attr_name):
-            values = vector_manager.to_vector(attr_name, item_list)
-            value = getattr(selected_item, attr_name)
-            normalized = cls.__normalize(values, prop=value)
+            values = vector_utils.to_vector(attr_name, item_list)
+            attr = getattr(selected_item, attr_name)
+            normalized = cls.__normalize(values, prop=attr)
             normalized = map(lambda v: 1 - abs(v) if v is not None else None, normalized)
             return normalized
+        else:
+            raise NotCalculatable("selected item's " + attr_name + " is None")
+
+    @classmethod
+    def calc_text_token_distance(cls, attr_name, item_list, selected_item):
+        if selected_item and getattr(selected_item, attr_name):
+            item_tokens = vector_utils.to_vector(attr_name, item_list)
+            tokens = vector_utils.to_value(getattr(selected_item, attr_name))
+
+            clusters, vectors = vector_utils.make_text_clusters(item_tokens)
+            target_vector = vector_utils.classify_text_tokens(tokens, clusters)
+            distances = map(lambda v: vector_utils.calc_vector_distance(target_vector, v), vectors)
+            inv_distance = map(lambda d: 4 if d == 0 else 1 - math.log(d), distances)
+            # 4 is large enough in f(x) = 1-log(x)
+
+            return cls.normalize(inv_distance)
         else:
             raise NotCalculatable("selected item's " + attr_name + " is None")
 
@@ -165,13 +185,13 @@ class ItemEvaluator(object):
 
         for a in attributes:
             name = a
-            selected_value = vector_manager.to_vector(name, [selected_item])[0]
+            selected_value = vector_utils.to_vector(name, [selected_item])[0]
 
             # don't use None or empty value to create criticize pattern
-            if not selected_value:
+            if selected_value is None:
                 continue
 
-            attribute_values = vector_manager.to_vector(name, item_list)
+            attribute_values = vector_utils.to_vector(name, item_list)
             pt_keys.append(name)
             if length == 0:
                 length = len(item_list)

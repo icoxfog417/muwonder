@@ -1,6 +1,7 @@
 # from django.db import models
 from django.conf import settings
 from django.conf.urls.static import static
+import re
 import soundcloud
 import secret_settings
 from datetime import datetime
@@ -31,7 +32,8 @@ class Track(JsonSerializable):
         self.description = ""
         self.genre = ""
         self.genre_score = lambda: self.genre_to_score(self.genre + u" " + self.tag_list)
-        self.tag_list = []
+        self.tag_list = u""
+        self.tag_tokens = lambda: self.tag_list_to_tokens(self.tag_list)
         self.track_type = ""
         self.bpm = 0
         self.comment_count = 0
@@ -76,6 +78,21 @@ class Track(JsonSerializable):
                 self.artwork_url = static("soundcloudapi/images/soundcloud_default.png")
 
     @classmethod
+    def tag_list_to_tokens(cls, tag_list):
+        p = re.compile(u'".+?"')
+        double_quoted = p.findall(tag_list)
+        exclude_double_quoted = tag_list
+        for dq in double_quoted:
+            exclude_double_quoted = exclude_double_quoted.replace(dq, u"")
+
+        tokens = exclude_double_quoted.split()
+        tokens = filter(None, map(lambda t: t.strip(), tokens))
+        if len(double_quoted) > 0:
+            tokens += map(lambda t: t.replace(u'"', u""), double_quoted)
+
+        return tokens
+
+    @classmethod
     def make_evaluator(cls, pattern_type, history=None):
         evaluator = ItemEvaluator(pattern_type)
         evaluator.set_rule("elapsed", EvaluationType.LessIsBetter)
@@ -85,6 +102,7 @@ class Track(JsonSerializable):
         evaluator.set_rule("download_count", EvaluationType.MoreIsBetter)
         evaluator.set_rule("playback_count", EvaluationType.MoreIsBetter)
         evaluator.set_rule("favoritings_count", EvaluationType.MoreIsBetter)
+        evaluator.set_rule("tag_tokens", EvaluationType.TextTokens)
 
         # set weight by history
 
@@ -107,8 +125,17 @@ class Track(JsonSerializable):
         return track_items
 
     @classmethod
+    def find_by_id(cls, track_id):
+        tracks = Track().find({"ids": track_id})
+        if len(tracks) > 0:
+            return tracks[0]
+        else:
+            return None
+
+    @classmethod
     def score_to_genre(cls, score):
-        return min(cls.get_genres(), key=lambda v: abs(v[1] - score))
+        genres = cls.get_genres()
+        return min(genres, key=lambda k: abs(genres[k] - score))
 
     @classmethod
     def genre_to_score(cls, genre):

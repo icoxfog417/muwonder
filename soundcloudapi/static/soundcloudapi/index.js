@@ -1,5 +1,11 @@
 var _vm = null;
 
+//authorized callback
+var _authorized = function(){
+    $("#soundcloudupload").fadeIn();
+    _vm.isConnect(true);
+}
+
 $(function(){
     //create widget
     function initWidget(url){
@@ -31,6 +37,10 @@ $(function(){
         self.trackInWidget = null;
         self.API_RECOMMEND = "/soundcloudapi/recommends/";
         self.API_GET_PATTERN = "/soundcloudapi/criticize_pattern/";
+        self.API_AUTHORIZATION = "/soundcloudapi/require_auth/";
+        self.API_IS_CONNECT = "/soundcloudapi/is_connect/";
+        self.API_DISCONNECT = "/soundcloudapi/disconnect/";
+        self.API_MAKE_PLAYLIST = "/soundcloudapi/make_playlist/";
         self.guide = new MuGuide("muguide");
         self.behaviorWatcher = new BehaviorWatcher();
 
@@ -40,6 +50,7 @@ $(function(){
         self.criticize = ko.observableArray([]);
         self.criticizeIndex = ko.observable(0);
         self.isPlaying = ko.observable(false);
+        self.isConnect = ko.observable(false);
         self.history = [];
         self.session = ko.observableArray([]);
         self.query = ko.observable("");
@@ -51,7 +62,8 @@ $(function(){
         }
         self.session_template = {
             message : "message-template",
-            criticize : "criticize-template"
+            criticize : "criticize-template",
+            playlist : "playlist-template"
         }
         self.criticize_type = {
             pattern : 0,
@@ -63,6 +75,7 @@ $(function(){
             pattern : 0,
             parameter : 1,
             like : 2,
+            playlist:3,
             message: 8,
             reload : 9,
             retry : 10
@@ -81,7 +94,7 @@ $(function(){
          */
         self.addSession = function(template, data){
             var passData = data;
-            if(passData["option"] === undefined){
+            if(data !== undefined && passData["option"] === undefined){
                 passData["option"] = null;
             }
             var s = {template:template, data:passData};
@@ -110,7 +123,7 @@ $(function(){
                 if(bpm > 50){
                     self.guide.amazing();
                     var option = {
-                        parameter: bpm
+                        "bpm": bpm
                     };
                     self.showGuide(self.guide_mode.parameter, option);
                 }
@@ -123,6 +136,13 @@ $(function(){
                     self.showGuide(self.guide_mode.reload);
                 }
                 return true;
+            });
+
+            //confirm connection status
+            $.getJSON(self.API_IS_CONNECT, function(isConnect){
+                if(isConnect){
+                    _authorized();
+                }
             });
 
             //for Django csrf
@@ -149,9 +169,10 @@ $(function(){
         self.getTracks = function(message, postData){
             self.showGuide(self.guide_mode.message, {message: message});
             self.guide.thinking(true);
-            var d = (postData === undefined) ? {} : postData;
-            if(d.q === undefined){
-                d.q = self.query();
+            var d = postData;
+            if(d === undefined){
+                d = {}
+                d.parameters = {"q": self.query()};
             }
 
             var success = function(tracks){
@@ -210,12 +231,23 @@ $(function(){
             }
             return $.ajax({
                 type: method,
-                data: data,
+                data: JSON.stringify(data),
                 url: target,
+                contentType: 'application/json; charset=utf-8',
                 dataType: "json",
                 success: success,
                 error: error
             })
+        }
+
+        self.require_auth = function(){
+            window.open(self.API_AUTHORIZATION, "Soundcloud Authorization",'width=1000, height=550, menubar=no, toolbar=no, scrollbars=no');
+        }
+        self.disconnect = function(){
+            $.getJSON(self.API_DISCONNECT, function(){
+                self.isConnect(false);
+                $("#soundcloudupload").fadeOut();
+            });
         }
 
         /*
@@ -237,12 +269,34 @@ $(function(){
                     return self.tracks;
                     break;
                 case self.content_mode.like:
-                    return self.liked;
+                    if(self.liked().length > 0){
+                        return self.liked;
+                    }else{
+                        self.showGuide(self.guide_mode.message, {message: "You haven't liked any tracks."});
+                        return self.tracks;
+                    }
                     break;
             }
             return function(){return [];};
         };
         self.observeTrackList = ko.computed(self.getTrackList);
+
+        self.getBodyContent = ko.computed(function(){
+            switch(self.contentMode()){
+                case self.content_mode.track:
+                    selected = self.getSelected();
+                    if(selected !== undefined){
+                        return { name: self.content_mode.track, data: selected, afterRender:self.drawTrackGraph }
+                    }else{
+                        return { name: self.content_mode.none };
+                    }
+                    break;
+                case self.content_mode.like:
+                    return { name: self.content_mode.like, data: self.liked() }
+                    break;
+            }
+            return {};
+        })
 
         self.drawTrackGraph = function(){
             selected = self.getSelected();
@@ -271,23 +325,20 @@ $(function(){
             var chart = new Chart(ctx).Radar(graphData);
         }
 
-        self.getBodyContent = ko.computed(function(){
-            switch(self.contentMode()){
-                case self.content_mode.track:
-                    selected = self.getSelected();
-                    if(selected !== undefined){
-                        return { name: self.content_mode.track, data: selected, afterRender:self.drawTrackGraph }
-                    }else{
-                        return { name: self.content_mode.none };
-                    }
-                    break;
-                case self.content_mode.like:
-                    return { name: self.content_mode.like, data: self.liked() }
-                    break;
+        /*
+          for style
+        */
+        self.trackStyle = function(index){
+            var css = "track";
+            if(index == self.trackIndex()){
+                css += " active";
             }
-            return {};
-        })
+            return css;
+        }
 
+        /*
+         handle client event
+         */
         self.toggleListMode = function(){
             var setToIndex = function(fromList, toList, index){
                 if(index() < fromList().length && fromList()[index()] !== undefined){
@@ -368,14 +419,6 @@ $(function(){
             }
         }
 
-        self.trackStyle = function(index){
-            var css = "track";
-            if(index == self.trackIndex()){
-                css += " active";
-            }
-            return css;
-        }
-
         /*
          * for criticize
          */
@@ -394,6 +437,14 @@ $(function(){
             }
         }
 
+        self.askMode = function(mode){
+            if(self.guideMode() == mode){
+                self.showGuide(self.guide_mode.none);
+            }else{
+                self.showGuide(mode);
+            }
+        }
+
         self.showGuide = function(mode, option){
             var isModeUpdate = true;
 
@@ -403,6 +454,12 @@ $(function(){
                 self.setSession(self.session_template.criticize, {text: "Oh, do you like this " + option.parameter + " beat!?", option:option});
             }else if(mode == self.guide_mode.like){
                 self.setSession(self.session_template.criticize, {text: "Would you like similar tracks?"});
+            }else if(mode == self.guide_mode.playlist){
+                if(self.liked().length > 0){
+                    self.setSession(self.session_template.playlist, option);
+                }else{
+                    self.setSession(self.session_template.message, {message: "You can make playlist by your liked tracks."});
+                }
             }else if(mode == self.guide_mode.message){
                 self.setSession(self.session_template.message, option);
             }else if(mode == self.guide_mode.reload){
@@ -427,7 +484,8 @@ $(function(){
             if(answer){
                 var selected = self.getSelected();
                 var data = {
-                    track_id: selected.item.id
+                    track_id: selected.item.id,
+                    parameters: {"q": self.query() }
                 };
 
                 switch(self.guideMode()){
@@ -440,12 +498,14 @@ $(function(){
                         break;
                     case self.guide_mode.pattern:
                         data.criticize_type = self.criticize_type.pattern;
-                        data.value = self.criticize()[self.criticizeIndex()].pattern;
+                        data.parameters["pattern"] = self.criticize()[self.criticizeIndex()].pattern;
                         self.getTracks(msg, data);
                         break;
                     case self.guide_mode.parameter:
                         data.criticize_type = self.criticize_type.parameter;
-                        data.value = option.parameter;
+                        for(key in option.parameter){
+                            data.parameters[key] = option.parameter[key];
+                        }
                         self.getTracks(msg, data);
                         break;
                     case self.guide_mode.reload:
@@ -460,6 +520,7 @@ $(function(){
                             self.criticizeIndex(next);
                             self.showGuide(self.guide_mode.pattern);
                         }else{
+                            self.criticizeIndex(0);
                             self.showGuide(self.guide_mode.reload);
                         }
                         break;
@@ -468,6 +529,35 @@ $(function(){
                         break;
                 }
             }
+        }
+
+        self.makePlaylist = function(formElement){
+            var $msg = $(formElement).find("#playlistMessage");
+            var $title = $(formElement).find("[name='name']");
+            var $button = $(formElement).find("[type='submit']");
+            var title = $title.val();
+            var sharing = $(formElement).find("[name='rblsharing']:checked").val();
+            var liked = [];
+            self.liked().forEach(function(s){
+                liked.push(s.item.id);
+            })
+
+            $button.attr("disabled", "disabled");
+            var data = {title:title, sharing:sharing, liked:liked};
+            var errorHandler = function(msg){
+                $msg.text(msg);
+                $button.removeAttr("disabled");
+            }
+            self.load(self.API_MAKE_PLAYLIST, "POST", data, function(data){
+                if(data.result){
+                    $button.hide();
+                    $msg.empty().append($("<a/>").attr("href",data.message).attr("target", "_blank").text("Your playlist here!"));
+                }else{
+                    errorHandler(data.message);
+                }
+            },function(data){
+                errorHandler(data.message);
+            })
         }
 
         /*
@@ -548,6 +638,7 @@ $(function(){
                 self._widget.load(url);
             }
         }
+
     }
     _vm = new mwViewModel();
     ko.applyBindings(_vm);

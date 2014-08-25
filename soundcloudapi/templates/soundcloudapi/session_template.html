@@ -58,3 +58,25 @@
         <button  class="pure-button" data-bind="click: function(){ $root.answer(false, option) } ">No</button>
     </div>
 </script>
+
+<script type="text/html" id="playlist-template">
+    <span>Do you register your favorite list as playlist?</span>
+    <form data-bind="submit: $root.makePlaylist" class="pure-form">
+        <fieldset>
+            <input type="text" name="name" placeholder="Playlist name" data-bind="value: $root.liked().length > 0 ? $root.liked()[0].item.title : ''">
+            <label for="rblprivate" class="pure-radio">
+                <input id="rblprivate" type="radio" name="rblsharing" value="private">
+                private
+            </label>
+            <label for="rblpublic" class="pure-radio">
+                <input id="rblpublic" type="radio" name="rblsharing" value="public" checked>
+                public
+            </label>
+            <div>
+                <input type="submit"  class="pure-button" value="Make" style="float:left;margin-right:10px" />
+                <div id="playlistMessage" style="float:left;margin-top:10px"></div>
+                <br style="clear:both"/>
+            </div>
+        </fieldset>
+    </form>
+</script>

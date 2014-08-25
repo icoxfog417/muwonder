@@ -13,6 +13,12 @@
 {% block header_menus %}
 <ul>
     <li>
+        <div style="margin-top:6px">
+            <input type="image" src="{% static 'soundcloudapi/images/btn-connect-m.png' %}" data-bind="click:require_auth, visible:!isConnect()" />
+            <input type="image" src="{% static 'soundcloudapi/images/btn-disconnect-m.png' %}" data-bind="click:disconnect, visible:isConnect()" />
+        </div>
+    </li>
+    <li>
         <form class="pure-form" data-bind="submit: getTracksByText">
             <input type="text" id="txtFilter" class="pure-input-rounded" placeholder="Text Filter" style="font-size:14px;" data-bind="value: query"/>
         </form>
@@ -58,8 +64,13 @@
                             <div class="message" style="min-height:110px;max-height:200px;overflow:auto;" data-bind="template: { name: template, data: data }"></div>
                         </div>
                     </div>
-                    <div style="width:110px;height:125px;margin-left:auto;">
-                        <canvas id="muguide" data-bind="click: ask" width="120" height="120"></canvas>
+                    <div style="width:185px;height:125px;margin-left:auto;">
+                        <div id="soundcloudupload" style="color:white;background-color:coral;text-align:center;width:60px;height:60px;border-radius:30px;float:left;font-size: 2em;line-height: 60px;display:none"
+                             data-bind="click:function(){ askMode(guide_mode.playlist); }">
+                            <i class="fa fa-soundcloud"></i>
+                        </div>
+                        <canvas id="muguide" data-bind="click: ask" width="120" height="120" style="float:right"></canvas>
+                        <br style="clear:both">
                     </div>
                 </div>
             </div>

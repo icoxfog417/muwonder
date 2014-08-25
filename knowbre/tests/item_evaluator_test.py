@@ -2,7 +2,7 @@ from __future__ import division
 import unittest
 from datetime import datetime
 from math import pow
-import knowbre.vector_manager as vector_manager
+import knowbre.vector_utils as vector_manager
 from knowbre.item_evaluator import ItemEvaluator, NotCalculatable
 
 
@@ -18,6 +18,7 @@ class EvaluateItem(object):
         self.release_date = datetime.now()
         self.elapsed = lambda: (datetime.now() - self.release_date).total_seconds() if self.release_date else None
         self.__private_val = 1
+        self.tags = []
         if item:
             self.set_params(item.bpm, item.reviews, item.release_date)
 
@@ -50,7 +51,7 @@ class EvaluateFunctionTestCase(unittest.TestCase):
         attributes = ItemEvaluator.get_attributes(item)
         for a in attributes:
             print a
-        self.assertEquals(4, len(attributes))  # 4 is the number of attribute except private.
+        self.assertEquals(5, len(attributes))  # 4 is the number of attribute except private.
 
     @print_title
     def test_to_vector_primitive(self):
@@ -129,6 +130,26 @@ class EvaluateFunctionTestCase(unittest.TestCase):
         for index, value in enumerate(calc_result):
             self.assertLess(abs(calc_result[index] - calc_returned[index]), 1 / pow(10, 5))
             print(calc_result[index])
+
+    @print_title
+    def test_calc_text_token_distance(self):
+        item_count = 5
+        test_items = map(lambda x: EvaluateItem(), range(item_count))
+
+        for i in range(item_count):
+            if i == 0:
+                test_items[i].tags = ["folk", "Rock", "Folk Rock", "Indie"]
+            elif i == 1:
+                test_items[i].tags = ["rock"]
+            elif i == 2:
+                test_items[i].tags = ["rock", "alternative rock"]
+            elif i == 3:
+                test_items[i].tags = ["magnet", "rock", "melodious chorus"]
+            elif i == 4:
+                test_items[i].tags = ["Rock", "Creature", "3d", "Mashup"]
+
+        distances = ItemEvaluator.calc_text_token_distance("tags", test_items, test_items[0])
+        print(distances)
 
     @print_title
     def test_calc_near_is_better_exception(self):
