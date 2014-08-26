@@ -1,5 +1,6 @@
 from json_serialiable import JsonSerializable
 from datetime import datetime
+from enum import Enum
 
 
 class SerializableClass(JsonSerializable):
@@ -12,6 +13,7 @@ class SerializableClass(JsonSerializable):
 
         self.__private = 10
         self.getter = lambda: self.__private
+        self.selection = Selection.option1
 
         self.list = [10, 11, 12]
         self.tuple = ("A", "B", "C")
@@ -30,6 +32,10 @@ class SerialiableKeyValue(JsonSerializable):
         self.key = key
         self.value = value
 
+class Selection(Enum):
+    option1 = 1
+    option2 = 2
+    option3 = 3
 
 def print_title(test_case):
 

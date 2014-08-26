@@ -25,6 +25,12 @@ class SerializeTestCase(unittest.TestCase):
         self.assertEqual(loaded_json["getter"], target.getter())
 
     @print_title
+    def test_enum(self):
+        target = SerializableClass()
+        loaded_json = json.loads(self.__serialize())
+        self.assertEqual(loaded_json["selection"], target.selection.value)
+
+    @print_title
     def test_object_member(self):
         target = SerializableClass()
         loaded_json = json.loads(self.__serialize())

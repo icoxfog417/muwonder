@@ -7,7 +7,7 @@ import json
 import random
 import soundcloud
 import secret_settings
-from soundcloudapi.models import ParameterAdapter
+from soundcloudapi.models import Parameter, ParameterAdapter
 from soundcloudapi.models import Track, TrackCriticizePattern, TrackCriticizeType
 
 
@@ -43,7 +43,8 @@ class RecommendApi(object):
             SessionManager.set_session(request, SessionManager.CRITICIZE_SESSION, [])
             SessionManager.set_session(request, SessionManager.TRACK_SESSION, [])
 
-            conditions = pa.parameters_to_conditions(posted_parameters)
+            parameters = pa.request_to_parameters(TrackCriticizeType.Parameter, track, posted_parameters)
+            conditions = pa.parameters_to_conditions(parameters)
 
             tracks = cls.get_tracks(conditions, [])
             if len(tracks) > 0:
@@ -55,13 +56,16 @@ class RecommendApi(object):
             tracks = cls.__get_session_tracks(request)  # get from session
 
             parameters = pa.request_to_parameters(criticize_type, track, posted_parameters)
+            history = cls.__get_session_history(request)
+
+            # merge history
+            parameters = ParameterAdapter.merge_parameters(history + [parameters])
 
             # filter by inputed parameters
             tracks = filter(lambda t: pa.filter_by_parameters(parameters, track, t), tracks)
 
             #todo blush up how to load tracks
             if len(tracks) <= 5:
-                history = SessionManager.get_session(request, SessionManager.CRITICIZE_SESSION)
                 conditions = pa.parameters_to_conditions(parameters)
                 tracks = cls.get_tracks(conditions, tracks, history)
 
@@ -74,7 +78,7 @@ class RecommendApi(object):
 
             # store to session
             SessionManager.set_session(request, SessionManager.TRACK_SESSION, map(lambda s: s["item"], serialized_evaluated))
-            SessionManager.add_session(request, SessionManager.CRITICIZE_SESSION, posted_parameters)
+            SessionManager.add_session(request, SessionManager.CRITICIZE_SESSION, map(lambda p: p.to_dict(), parameters))
 
             if limit > 0:
                 serialized_evaluated = serialized_evaluated[:limit]
@@ -134,6 +138,12 @@ class RecommendApi(object):
         tracks = SessionManager.get_session(request, SessionManager.TRACK_SESSION)
         tracks = Track().load_dict(tracks)  # deserialization
         return tracks
+
+    @classmethod
+    def __get_session_history(cls, request):
+        parameters = SessionManager.get_session(request, SessionManager.CRITICIZE_SESSION)
+        parameters = Parameter().load_dict(parameters)  # deserialization
+        return parameters
 
     @classmethod
     def __get_track(cls, target_track_id, tracks):

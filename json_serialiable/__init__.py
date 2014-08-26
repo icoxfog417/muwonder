@@ -1,5 +1,6 @@
 import json
 import inspect
+from enum import Enum
 from datetime import datetime
 
 
@@ -9,11 +10,19 @@ class JsonSerializable(object):
     def __init__(self):
 
         self.__serialize_rule = {}
-        self.__serialize_rule.update({"JsonSerializable": lambda j: j.__make_attribute_dict(True)})
-        self.__serialize_rule.update({"datetime": lambda v: v.strftime("%Y/%m/%d %H:%M:%S")})
+        self.__serialize_rule.update({JsonSerializable: lambda j: j.__make_attribute_dict(True)})
+        self.__serialize_rule.update({datetime: lambda v: v.strftime("%Y/%m/%d %H:%M:%S")})
+        self.__serialize_rule.update({Enum: lambda v: v.value})
 
         self.__deserialize_rule = {}
-        self.__deserialize_rule.update({"datetime": lambda v: datetime.strptime(v, "%Y/%m/%d %H:%M:%S")})
+        self.__deserialize_rule.update({datetime: lambda t, v: datetime.strptime(v, "%Y/%m/%d %H:%M:%S")})
+        self.__deserialize_rule.update({Enum: lambda t, v: t(v)})
+
+    def set_serialize_rule(self, rule):
+        self.__serialize_rule.update(rule)
+
+    def set_deserialize_rule(self, rule):
+        self.__deserialize_rule.update(rule)
 
     def load_dict(self, dictionary_data):
         if isinstance(dictionary_data, list):
@@ -120,14 +129,28 @@ class JsonSerializable(object):
         return instance.__module__ + "." + instance.__class__.__name__
 
     def __set_attribute(self, name, value, default_value):
-        if type(default_value).__name__ in self.__deserialize_rule:
-            setattr(self, name, self.__deserialize_rule[type(default_value).__name__](value))
+        key_type = None
+        rule_type = None
+        for t in self.__deserialize_rule:
+            if isinstance(default_value, t):
+                key_type = t
+                rule_type = default_value.__class__
+                break
+
+        if rule_type is not None:
+            setattr(self, name, self.__deserialize_rule[key_type](rule_type, value))
         else:
             setattr(self, name, value)
 
     def attribute_to_value(self, attribute):
-        if type(attribute).__name__ in self.__serialize_rule:
-            return self.__serialize_rule[type(attribute).__name__](attribute)
+        rule_type = None
+        for t in self.__serialize_rule:
+            if isinstance(attribute, t):
+                rule_type = t
+                break
+
+        if rule_type is not None:
+            return self.__serialize_rule[rule_type](attribute)
         else:
             return self.__attribute_to_value(attribute)
 
