@@ -147,6 +147,12 @@ class Track(JsonSerializable):
         return min(genres, key=lambda k: abs(genres[k] - score))
 
     @classmethod
+    def score_to_genres(cls, score, count):
+        genres = cls.get_genres()
+        sorted_genre = sorted(genres.keys(), key=lambda k: abs(genres[k] - score))
+        return sorted_genre[:count]
+
+    @classmethod
     def genre_to_score(cls, genre):
         score = None
         genres = cls.get_genres()

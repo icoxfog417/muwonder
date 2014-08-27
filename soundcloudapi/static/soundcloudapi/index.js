@@ -2,7 +2,6 @@ var _vm = null;
 
 //authorized callback
 var _authorized = function(){
-    $("#soundcloudupload").fadeIn();
     _vm.isConnect(true);
 }
 
@@ -41,6 +40,7 @@ $(function(){
         self.API_IS_CONNECT = "/soundcloudapi/is_connect/";
         self.API_DISCONNECT = "/soundcloudapi/disconnect/";
         self.API_MAKE_PLAYLIST = "/soundcloudapi/make_playlist/";
+        self.$PLAYLIST_MAKE_ICON = "#soundcloudupload"
         self.guide = new MuGuide("muguide");
         self.behaviorWatcher = new BehaviorWatcher();
 
@@ -110,6 +110,7 @@ $(function(){
          */
         self.init = function(){
             //set timeline event
+
             self.behaviorWatcher.subscribe(self.behaviorKind.askAboutTrack,30000,function(){
                 if(self.guideMode() == self.guide_mode.none){
                     self.showGuide(self.guide_mode.like);
@@ -131,12 +132,14 @@ $(function(){
             });
 
             //set timeline event
+            /*
             self.behaviorWatcher.subscribeNoBehaviorHandler(30000,function(){
                 if(self.guideMode() == self.guide_mode.none){
                     self.showGuide(self.guide_mode.reload);
                 }
                 return true;
             });
+            */
 
             //confirm connection status
             $.getJSON(self.API_IS_CONNECT, function(isConnect){
@@ -194,7 +197,7 @@ $(function(){
 
             var error = function(error){
                 console.log(error);
-                self.showGuide(self.guide_mode.retry, {message: "Oops, server cause error.\nPlease try again."});
+                self.showGuide(self.guide_mode.retry, {message: "Oops, server causes the error.Please try again."});
             }
 
             if(postData === undefined){
@@ -245,7 +248,7 @@ $(function(){
         self.disconnect = function(){
             $.getJSON(self.API_DISCONNECT, function(){
                 self.isConnect(false);
-                $("#soundcloudupload").fadeOut();
+                $(self.$PLAYLIST_MAKE_ICON).fadeOut();
             });
         }
 
@@ -265,10 +268,14 @@ $(function(){
         self.getTrackList = function(){
             switch(self.listMode()){
                 case self.content_mode.track:
+                    $(self.$PLAYLIST_MAKE_ICON).fadeOut();
                     return self.tracks;
                     break;
                 case self.content_mode.like:
                     if(self.liked().length > 0){
+                        if(self.isConnect() && !$(self.$PLAYLIST_MAKE_ICON).is(":visible")){
+                            $(self.$PLAYLIST_MAKE_ICON).fadeIn();
+                        }
                         return self.liked;
                     }else{
                         self.showGuide(self.guide_mode.message, {message: "You haven't had favorite tracks."});
@@ -301,13 +308,13 @@ $(function(){
             selected = self.getSelected();
             score = selected.score_detail;
             genre_score = selected.item.genre_score;
-            if(!(genre_score === undefined || genre_score == null || genre_score == "")){
+            if(!(genre_score === undefined || genre_score == null)){
                 genre_score += 1; //genrescore is -1 - 1. so move base to 0
             }
 
             var ctx = $("#trackRaderChart").get(0).getContext("2d");
             var graphData = {
-                labels: ["Vibration", "PlayBack", "Favorites", "Download", "Comments", "Recent"],
+                labels: ["Vibration", "PlayBack", "Likes", "Download", "Comments", "Recent"],
                 datasets: [
                     {
                         label: "Track Detail",
@@ -423,9 +430,9 @@ $(function(){
          */
         self.ask = function(){
             self.guide.waiting(true);
-            var guideSequence = [self.guide_mode.pattern, self.guide_mode.none];
+            var guideSequence = [self.guide_mode.reload, self.guide_mode.none];
             if(self.getLikedIndex() > -1 || self.isPlaying()){
-                guideSequence.unshift(self.guide_mode.like);
+                guideSequence.unshift(self.guide_mode.like, self.guide_mode.pattern);
             }
             var guideNow = guideSequence.indexOf(self.guideMode());
             if(guideNow > -1){

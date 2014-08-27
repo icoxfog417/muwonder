@@ -106,6 +106,17 @@ html, button, input, select, textarea,
     display:none;
 }
 
+.criticize_box{
+    width:120px;
+    float:left;
+    margin-right:15px;
+    margin-bottom:10px;
+    border-radius: 5px;
+    border: 1px solid silver;
+    padding: 5px;
+    text-align:center;
+}
+
 /*
  * -- PURE BUTTON STYLES --
  * I want my pure-button elements to look a little different

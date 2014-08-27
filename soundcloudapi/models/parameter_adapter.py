@@ -60,6 +60,7 @@ class ParameterAdapter(object):
         elif criticize_type == TrackCriticizeType.Pattern:
             criticize = CriticizePattern(pattern=request_parameters["pattern"])
             direction = criticize.get_direction()
+            parameters.append(Parameter("pattern", criticize.pattern))
             for c in criticize.get_targets():
                 parameters.append(Parameter(c.name, vector_utils.to_value(getattr(track, c.name)), direction))
 
@@ -82,8 +83,9 @@ class ParameterAdapter(object):
         return self.request_to_parameters(TrackCriticizeType.Like, track, {})
 
     def filter_by_parameters(self, parameters, base_track, target_track):
-        if "pattern" in parameters:
-            cp = CriticizePattern(pattern=parameters["pattern"])
+        pattern = filter(lambda p: p.name == "pattern", parameters)
+        if len(pattern) > 0:
+            cp = CriticizePattern(pattern[0].value)
             return cp.is_fit_pattern(base_track, target_track)
         else:
             return self.is_fit_track(base_track, target_track)
@@ -205,7 +207,8 @@ class ParameterAdapter(object):
         base_date = datetime.now() - timedelta(days=730)
         default_condition["created_at"] = {"from": base_date.strftime("%Y-%m-%d %H:%M:%S")}
 
-        random_genres = random.sample(Track.get_genres().keys(), 5)
+        random_score = random.uniform(-1, 1)
+        random_genres = Track.score_to_genres(random_score, 5)
         default_condition["genres"] = u",".join(random_genres)
 
         default_condition["filter"] = u"streamable"
