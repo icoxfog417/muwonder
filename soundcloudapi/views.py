@@ -1,14 +1,12 @@
 from django.http import HttpResponse, HttpResponseRedirect
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.shortcuts import render
-from urllib2 import HTTPError
-from time import sleep
 import json
 import random
-import soundcloud
-import secret_settings
-from soundcloudapi.models import Parameter, ParameterAdapter
-from soundcloudapi.models import Track, TrackCriticizePattern, TrackCriticizeType
+from urllib2 import HTTPError
+from time import sleep
+from soundcloudapi.models import Track, User, soundcloud_client
+from soundcloudapi.models import TrackCriticizePattern, TrackCriticizeType, Parameter, ParameterAdapter
 
 
 class RecommendApi(object):
@@ -20,16 +18,14 @@ class RecommendApi(object):
 
     @classmethod
     def recommends(cls, request):
-        track = None
         tracks = []
         pa = ParameterAdapter()
-        limit = 20  # todo:get limit by parameter
+        limit = 10  # todo:get limit by parameter
         response = []
 
         # get request parameters
         request_body = None
         if request.method == "GET":
-            # QueryDict is wrong when GET.
             request_body = request.GET.dict().keys()[0]
         else:
             request_body = request.body
@@ -43,12 +39,9 @@ class RecommendApi(object):
             SessionManager.set_session(request, SessionManager.CRITICIZE_SESSION, [])
             SessionManager.set_session(request, SessionManager.TRACK_SESSION, [])
 
-            parameters = pa.request_to_parameters(TrackCriticizeType.Parameter, track, posted_parameters)
-            conditions = pa.parameters_to_conditions(parameters)
+            parameters = pa.request_to_parameters(TrackCriticizeType.Parameter, None, posted_parameters)
+            tracks = cls.get_scored_tracks(parameters, None, [])
 
-            tracks = cls.get_tracks(conditions, [])
-            if len(tracks) > 0:
-                track = tracks[0]
         else:
             track_id = posted[u"track_id"]
             criticize_type = TrackCriticizeType(posted[u"criticize_type"])
@@ -58,23 +51,17 @@ class RecommendApi(object):
             parameters = pa.request_to_parameters(criticize_type, track, posted_parameters)
             history = cls.__get_session_history(request)
 
-            # merge history
+            # merge history and make parameter
             parameters = ParameterAdapter.merge_parameters(history + [parameters])
 
-            # filter by inputed parameters
-            tracks = filter(lambda t: pa.filter_by_parameters(parameters, track, t), tracks)
+            if criticize_type == TrackCriticizeType.Like:
+                tracks = cls.get_favorite_tracks(parameters, track, tracks)
+            else:
+                tracks = cls.get_scored_tracks(parameters, track, tracks)
 
-            #todo blush up how to load tracks
-            if len(tracks) <= 5:
-                conditions = pa.parameters_to_conditions(parameters)
-                tracks = cls.get_tracks(conditions, tracks, history)
-
-        if len(tracks) > 0 and track:
-            evaluator = Track.make_evaluator(TrackCriticizePattern)
-            evaluated = evaluator.calc_score(tracks, track)
-
+        if len(tracks) > 0:
             # to dictionary
-            serialized_evaluated = map(lambda s: {"score": s.score, "item": s.item.to_dict(), "score_detail": s.score_detail}, evaluated)
+            serialized_evaluated = map(lambda s: {"score": s.score, "item": s.item.to_dict(), "score_detail": s.score_detail}, tracks)
 
             # store to session
             SessionManager.set_session(request, SessionManager.TRACK_SESSION, map(lambda s: s["item"], serialized_evaluated))
@@ -88,50 +75,108 @@ class RecommendApi(object):
         return HttpResponse(response, content_type="application/json")
 
     @classmethod
-    def get_tracks(cls, conditions, initial_tracks, history=[]):
-        track = Track()
-        tracks = initial_tracks
+    def get_scored_tracks(cls, parameters, track, initial_tracks):
+        tracks = []
         trial_count = 0
-        cond = conditions
+        finder = Track()
+        base_track = track
+        pa = ParameterAdapter()
+        conditions = pa.parameters_to_conditions(parameters)
 
         while trial_count < RecommendApi.TRACK_TRIAL_LIMIT and len(tracks) <= RecommendApi.TRACK_COUNT_BASE:
             try:
                 # get tracks by criticizes
                 if len(tracks) > 0:
-                    cond["offset"] = len(tracks)
+                    conditions["offset"] = len(tracks)
 
-                new_tracks = track.find(cond)
+                if trial_count == 0:
+                    tracks += initial_tracks
+
+                new_tracks = finder.find(conditions)
                 tracks += filter(lambda t: t.id not in [t.id for t in tracks], new_tracks)
+
+                # filter by inputed parameters
+                if track:
+                    tracks = filter(lambda t: pa.filter_by_parameters(parameters, track, t), tracks)
+
+            except HTTPError as ex:
+                    pass
+
+            trial_count += 1
+            sleep(0.5)
+
+        scored = tracks
+        if len(tracks) > 0:
+            if track is None:
+                base_track = tracks[0]
+
+            evaluator = Track.make_evaluator(TrackCriticizePattern)
+            scored = evaluator.calc_score(tracks, base_track)
+
+        scored = scored[:RecommendApi.TRACK_COUNT_BASE]
+
+        return scored
+
+    @classmethod
+    def get_favorite_tracks(cls, parameters, track, initial_tracks):
+        if track is None:
+            Exception("If getting favorite, you have to set track parameter")
+
+        tracks = []
+        favoriters = []
+        trial_count = 0
+        pa = ParameterAdapter()
+        user_evaluator = User.make_evaluator()
+
+        while trial_count < RecommendApi.TRACK_TRIAL_LIMIT and len(tracks) <= RecommendApi.TRACK_COUNT_BASE:
+            try:
+                # get tracks by criticizes
+                if trial_count == 0:
+                    favoriters = track.get_favoriters()
+                    if len(favoriters) > 0:
+                        favoriters = user_evaluator.calc_score(favoriters, favoriters[0])
+                    else:
+                        break
+
+                if len(favoriters) > trial_count:
+                    new_tracks = favoriters[trial_count].item.get_favorites()
+                    tracks += filter(lambda t: t.id not in [t.id for t in tracks], new_tracks)
+                    tracks = filter(lambda t: pa.filter_by_parameters(parameters, track, t), tracks)
+
             except HTTPError as ex:
                 pass
 
             trial_count += 1
             sleep(0.5)
 
-        tracks = tracks[:RecommendApi.TRACK_COUNT_BASE]
+        scored = []
+        if len(tracks) > 0:
+            evaluator = Track.make_evaluator(TrackCriticizePattern)
+            scored = evaluator.calc_score(tracks, track)
+        else:
+            scored = cls.get_scored_tracks(parameters, track, tracks)
 
-        return tracks
+        scored = scored[:RecommendApi.TRACK_COUNT_BASE]
+
+        return scored
 
     @classmethod
     def get_criticize_pattern(cls, request):
         if request.method == "POST":
-            track_id = request.POST.get(u"track_id")
+            posted = json.loads(request.body)
+            track_id = posted[u"track_id"]
 
             tracks = cls.__get_session_tracks(request)
             track = cls.__get_track(track_id, tracks)
-            limit = 3   #todo receive it from parameter
 
-            evaluator = Track.make_evaluator(TrackCriticizePattern)
+            evaluator = Track.make_evaluator()
             criticize_patterns = evaluator.make_pattern(tracks, track)
 
             questions = TrackCriticizePattern.patterns_to_questions(criticize_patterns, track, tracks)
-            if len(questions) > limit:
-                questions = random.sample(questions, limit)
-
             serialized_question = json.dumps(questions)
             return HttpResponse(serialized_question, content_type="application/json")
         else:
-            raise Exception("you have to use POST method when access the get_criticize_pattern.")
+            raise Exception("You have to use POST method when access the get_criticize_pattern.")
 
     @classmethod
     def __get_session_tracks(cls, request):
@@ -146,11 +191,14 @@ class RecommendApi(object):
         return parameters
 
     @classmethod
-    def __get_track(cls, target_track_id, tracks):
+    def __get_track(cls, track_id, tracks):
+        if not track_id:
+            Exception("Track id is not defined")
+
         track = None
-        track = next(iter(filter(lambda t: t.id == target_track_id, tracks)), None)
+        track = next(iter(filter(lambda t: t.id == track_id, tracks)), None)
         if track is None:
-            track = Track.find_by_id(target_track_id)
+            track = Track.find_by_id(track_id)
 
         return track
 
@@ -193,23 +241,13 @@ def index(request):
     return render(request, "soundcloudapi/index.html")
 
 
-def __make_authorize_client(request):
-    client = soundcloud.Client(
-        client_id=secret_settings.SOUND_CLOUD_ID,
-        client_secret=secret_settings.SOUND_CLOUD_SECRET,
-        redirect_uri="http://{0}/soundcloudapi/authorized".format(request.get_host())
-    )
-    return client
-
-
 def require_auth(request):
-
-    client = __make_authorize_client(request)
+    client = soundcloud_client.create_for_authorization(request.get_host())
     return HttpResponseRedirect(client.authorize_url())
 
 
 def authorized(request):
-    client = __make_authorize_client(request)
+    client = soundcloud_client.create_for_authorization(request.get_host())
 
     access_token = client.exchange_token(code=request.GET.get('code'))
     SessionManager.set_session(request, SessionManager.SOUNDCLOUD_ACCESS_TOKEN, access_token.obj)
@@ -233,11 +271,7 @@ def make_playlist(request):
 
     if SessionManager.SOUNDCLOUD_ACCESS_TOKEN in request.session:
         token = SessionManager.get_session(request, SessionManager.SOUNDCLOUD_ACCESS_TOKEN)
-        proxy = {}
-        if secret_settings.HTTP_PROXY:
-            proxy["http"] = secret_settings.HTTP_PROXY
-
-        client = soundcloud.Client(access_token=token[u"access_token"])
+        client = soundcloud_client.create_by_token(token)
 
         posted = json.loads(request.body)
         title = posted.get(u"title")

@@ -1,12 +1,10 @@
 # from django.db import models
-from django.conf import settings
 from django.conf.urls.static import static
 import re
-import soundcloud
-import secret_settings
 from datetime import datetime
 from knowbre.item_evaluator import ItemEvaluator, EvaluationType
 from json_serialiable import JsonSerializable
+import soundcloud_client
 from soundcloud_resource import SoundCloudResource
 
 
@@ -41,11 +39,7 @@ class Track(JsonSerializable):
         self.playback_count = 0
         self.favoritings_count = 0
 
-        proxy = {}
-        if secret_settings.HTTP_PROXY:
-            proxy["http"] = secret_settings.HTTP_PROXY
-
-        self.__client = soundcloud.Client(client_id=secret_settings.SOUND_CLOUD_ID, proxies=proxy)
+        self.__client = soundcloud_client.create()
 
         if item:
             self.set_param(item)
@@ -93,8 +87,9 @@ class Track(JsonSerializable):
         return tokens
 
     @classmethod
-    def make_evaluator(cls, pattern_type, history=None):
-        evaluator = ItemEvaluator(pattern_type)
+    def make_evaluator(cls, history=None):
+        from .track_criticize_pattern import TrackCriticizePattern
+        evaluator = ItemEvaluator(TrackCriticizePattern)
         evaluator.set_rule("elapsed", EvaluationType.LessIsBetter)
         evaluator.set_rule("genre_score", EvaluationType.NearIsBetter)
         evaluator.set_rule("bpm", EvaluationType.NearIsBetter)
@@ -105,6 +100,9 @@ class Track(JsonSerializable):
         evaluator.set_rule("tag_tokens", EvaluationType.TextTokens)
 
         # set weight by history
+        evaluator.set_weight("comment_count", 1.5)
+        evaluator.set_weight("playback_count", 2)
+        evaluator.set_weight("favoritings_count", 2)
 
         return evaluator
 
@@ -131,6 +129,17 @@ class Track(JsonSerializable):
             return tracks[0]
         else:
             return None
+
+    def get_favoriters(self):
+        """
+        get recoomend the tracks by inputed parameters
+        @conditions
+        """
+
+        users = self.__client.get("/tracks/{0}/favoriters".format(self.id))
+        from .user import User
+        user_items = map(lambda u: User(SoundCloudResource(u)), users)
+        return user_items
 
     @classmethod
     def score_to_genre(cls, score):

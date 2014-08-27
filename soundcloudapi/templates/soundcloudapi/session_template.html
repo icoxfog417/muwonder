@@ -20,7 +20,7 @@
                     <tbody>
                     <tr><td>Genre</td><td data-bind="text:item.genre" style="text-overflow: ellipsis;"></td></tr>
                     <tr><td>PlayBack</td><td data-bind="text:item.playback_count" style="text-align:right"></td></tr>
-                    <tr><td>Like</td><td data-bind="text:item.favoritings_count" style="text-align:right"></td></tr>
+                    <tr><td>Favorites</td><td data-bind="text:item.favoritings_count" style="text-align:right"></td></tr>
                     <tr><td>Download</td><td data-bind="text:item.download_count" style="text-align:right"></td></tr>
                     <tr><td>Comments</td><td data-bind="text:item.comment_count" style="text-align:right"></td></tr>
                     <tr><td>Created At</td><td data-bind="text:item.created_at"></td></tr>
@@ -39,23 +39,36 @@
 
 <script type="text/html" id="like-template">
     <div data-bind="visible: $data.length == 0">No liked tracks.</div>
-    <pre >すきなとらっく</pre>
 </script>
 
-
 <script type="text/html" id="message-template">
-    <pre data-bind="text: message"></pre>
+    <div data-bind="text: message"></div>
     <div>
         <button  class="pure-button" data-bind="click: $root.retry, visible:($root.guideMode() == $root.guide_mode.retry)">Retry Loading</button>
     </div>
 </script>
 
-<script type="text/html" id="criticize-template">
-    <div data-bind="text: text" class="title"></div>
+<script type="text/html" id="question-template">
+    <div data-bind="text: message"></div>
+    <br/>
     <div>
         <button  class="pure-button" data-bind="click: function(){ $root.answer(true, option) } ">Yes</button>
         &nbsp;&nbsp;&nbsp;&nbsp;
         <button  class="pure-button" data-bind="click: function(){ $root.answer(false, option) } ">No</button>
+    </div>
+</script>
+
+<script type="text/html" id="criticize-template">
+    <div data-bind="foreach: $data">
+        <div style="width:120px; float:left; margin-right:15px; margin-bottom:10px; border-radius: 5px;border: 1px solid silver;padding: 5px; text-align:center">
+            <div style="text-align:center; background-color: coral;color: white; border-radius:5px; padding:5px;" data-bind="text: type"></div>
+            <button  class="pure-button" style="margin-top:10px;width: 100%;" data-bind="enable: up_pattern != '', click:function(){ $root.answer(true,up_pattern) }">Up</button><br/>
+            <button  class="pure-button" style="margin-top:20px;width: 100%;" data-bind="enable: down_pattern != '', click:function(){ $root.answer(true,down_pattern) }">Down</button>
+        </div>
+    </div>
+    <br style="clear:both" />
+    <div style="text-align:right">
+        <button  class="pure-button" data-bind="click: function(){ $root.answer(false) } ">Cancel</button>
     </div>
 </script>
 

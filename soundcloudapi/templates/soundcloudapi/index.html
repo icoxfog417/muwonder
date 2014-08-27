@@ -11,17 +11,25 @@
 {% endblock %}
 
 {% block header_menus %}
-<ul>
+<ul class="header_menus">
     <li>
-        <div style="margin-top:6px">
+        <div class="soundcloud-connect-wide" style="margin-top:6px">
             <input type="image" src="{% static 'soundcloudapi/images/btn-connect-m.png' %}" data-bind="click:require_auth, visible:!isConnect()" />
             <input type="image" src="{% static 'soundcloudapi/images/btn-disconnect-m.png' %}" data-bind="click:disconnect, visible:isConnect()" />
         </div>
     </li>
     <li>
-        <form class="pure-form" data-bind="submit: getTracksByText">
-            <input type="text" id="txtFilter" class="pure-input-rounded" placeholder="Text Filter" style="font-size:14px;" data-bind="value: query"/>
-        </form>
+        <div class="pure-g">
+            <div class="soundcloud-connect-small pure-u-1-5" style="background-color:white;border-radius: 10px;height: 35px;line-height: 35px;">
+                <i class="fa fa-soundcloud" style="color:coral" data-bind="click:require_auth, visible:!isConnect()"></i>
+                <i class="fa fa-soundcloud" style="color:silver" data-bind="click:disconnect, visible:isConnect()"></i>
+            </div>
+            <div class="pure-u-4-5">
+                <form class="pure-form" data-bind="submit: getTracksByText" >
+                    <input type="text" id="txtFilter" class="pure-input-rounded" placeholder="Text Filter" style="font-size:14px;width:100%" data-bind="value: query"/>
+                </form>
+            </div>
+        </div>
     </li>
 </ul>
 
@@ -61,15 +69,14 @@
                 <div style="position:absolute;bottom:0px;right:0px;width:100%;" >
                     <div data-bind="foreach: session, visible: $root.guideMode() > -1" class="">
                         <div class="arrow_box">
-                            <div class="message" style="min-height:110px;max-height:200px;overflow:auto;" data-bind="template: { name: template, data: data }"></div>
+                            <div class="message" style="min-height:110px;max-height:210px;overflow:auto;" data-bind="template: { name: template, data: data }"></div>
                         </div>
                     </div>
-                    <div style="width:185px;height:125px;margin-left:auto;">
-                        <div id="soundcloudupload" style="color:white;background-color:coral;text-align:center;width:60px;height:60px;border-radius:30px;float:left;font-size: 2em;line-height: 60px;display:none"
-                             data-bind="click:function(){ askMode(guide_mode.playlist); }">
-                            <i class="fa fa-soundcloud"></i>
+                    <div class="characters">
+                        <div id="soundcloudupload" data-bind="click:function(){ askMode(guide_mode.playlist); }">
+                            <i class="fa fa-list"></i>
                         </div>
-                        <canvas id="muguide" data-bind="click: ask" width="120" height="120" style="float:right"></canvas>
+                        <canvas id="muguide" data-bind="click: ask" width="120" height="120" style="float:right;"></canvas>
                         <br style="clear:both">
                     </div>
                 </div>

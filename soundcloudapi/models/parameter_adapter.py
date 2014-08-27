@@ -1,10 +1,11 @@
+import re
+import random
 from datetime import datetime, timedelta
+import math
 from knowbre import CriticizePattern, CriticizeDirection, vector_utils
 from soundcloudapi.models import Track, TrackCriticizeType
 from json_serialiable import JsonSerializable
 from collections import defaultdict
-import random
-import re
 
 
 class Parameter(JsonSerializable):
@@ -93,12 +94,19 @@ class ParameterAdapter(object):
         for p in parameters:
             key = p.name
             target_value = vector_utils.to_value(target_track.__dict__[key])
-            if p.value is not None and target_value is not None:
+            if not self.is_none_or_empty(p.value) and not self.is_none_or_empty(target_value):
                 compare_value = self.adjust_parameter(key, p.value, False)
                 if compare_value and not (compare_value <= target_value <= self.adjust_parameter(key, p.value, True)):
                     result = False
 
         return result
+
+    @classmethod
+    def is_none_or_empty(cls, value):
+        if value is None or value == "" or value == u"":
+            return True
+        else:
+            return False
 
     @classmethod
     def merge_parameters(cls, parameters_list):
@@ -224,27 +232,29 @@ class ParameterAdapter(object):
 
         if parameter_name == "created_at":
             if is_up:
-                result = value + timedelta(days=180)
+                result = value + timedelta(days=365)
             else:
-                result = value - timedelta(days=180)
+                result = value - timedelta(days=365)
 
             if result > datetime.now():
-                result = datetime.now() - timedelta(days=90)
+                if is_up:
+                    result = datetime.now()
+                else:
+                    result = datetime.now() - timedelta(days=365)
 
-        if parameter_name in ["comment_count", "download_count", "playback_count", "favoritings_count"]:
+        if parameter_name in ["playback_count", "favoritings_count"]:
             if is_up:
-                result = value * 1.5
+                result = math.exp(math.log(value) * 1.2)
             else:
-                result = value * 0.5
+                result = math.exp(math.log(value) * 0.8)
 
         return result
 
     @classmethod
     def __get_criticizables(cls):
-        return ["bpm", "genre", "genre_score", "created_at", "comment_count", "download_count", "playback_count", "favoritings_count"]
+        # not use comment_count and download_count. because commentable/downloadable track is there.
+        return ["bpm", "genre", "genre_score", "created_at", "playback_count", "favoritings_count"]
 
     @classmethod
     def __get_conditionables(cls):
         return ["q", "bpm", "genre", "genre_score", "created_at"]
-
-

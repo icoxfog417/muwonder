@@ -19,7 +19,7 @@ html, button, input, select, textarea,
 }
 
 #content {
-    padding-top:53px;
+    padding-top:90px;
 }
 
 #footer {
@@ -46,6 +46,13 @@ html, button, input, select, textarea,
     height:170px;
     background-color:#333;
     padding-top:10px;
+}
+
+.soundcloud-connect-wide{
+    display:none;
+}
+.soundcloud-connect-small{
+    display:block;
 }
 
 .pure-img-responsive {
@@ -89,6 +96,7 @@ html, button, input, select, textarea,
 
 .message pre{
     font-family:"Hiragino Kaku Gothic ProN", Meiryo, sans-serif !important;
+    font-size: 12px;
 }
 .message a{
     color:#7f8c8d;
@@ -113,6 +121,29 @@ iframe {
      display:block;
      border:0;
      margin-bottom: 20px;
+}
+
+.characters{
+    width:135px;
+    height:125px;
+    margin-left:auto;
+}
+
+#soundcloudupload {
+    color:white;
+    background-color:coral;
+    text-align:center;
+    width:30px;
+    height:30px;
+    border-radius:10px;
+    font-size: 1em;
+    line-height: 30px;
+    float:left;
+    display:none;
+}
+
+#muguide {
+    zoom: 0.8;
 }
 
 /*
@@ -208,6 +239,7 @@ iframe {
     }
     /* We want to give the content area some more padding */
     #content {
+        padding-top:53px;
     }
 
     #footer {
@@ -215,6 +247,32 @@ iframe {
 
     .display-none-under-middle{
         display:inline;
+    }
+    .soundcloud-connect-wide{
+        display:block;
+    }
+    .soundcloud-connect-small{
+        display:none;
+    }
+
+    .message pre{
+        font-size: 16px;
+    }
+
+    .characters{
+        width:165px;
+    }
+
+    #soundcloudupload {
+        border-radius:20px;
+        font-size: 1.2em;
+        line-height: 40px;
+        width:40px;
+        height:40px;
+    }
+
+    #muguide {
+        zoom: 1.0;
     }
 
     /* We can align the menu header to the left, but float the

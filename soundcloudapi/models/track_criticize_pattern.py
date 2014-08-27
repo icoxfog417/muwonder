@@ -18,69 +18,69 @@ class TrackCriticizePattern(CriticizePattern):
     def patterns_to_questions(cls, patterns, track, tracks):
         questions = map(lambda c: c.make_question(track, tracks), patterns)
 
-        # merge same questions
+        def pattern_type(is_up):
+            return "up_pattern" if is_up else "down_pattern"
+
         merged = {}
-        for s_p in questions:
-            question = s_p["text"]
-            if not question:
-                continue
+        for p in questions:
+            for s_p in p:
+                question = s_p["type"]
 
-            if (not question in merged) or (question in merged and len(s_p["pattern"]) > len(merged[question]["pattern"])):
-                merged[question] = s_p
+                if not question in merged:
+                    merged[question] = {}
+                    merged[question][pattern_type(s_p["is_up"])] = s_p["pattern"]
+                    merged[question][pattern_type(not s_p["is_up"])] = ""
+                elif not pattern_type(s_p["is_up"]) in merged[question]:
+                    merged[question][pattern_type(s_p["is_up"])] = s_p["pattern"]
+                elif len(s_p["pattern"]) > len(merged[question][pattern_type(s_p["is_up"])]):
+                    merged[question][pattern_type(s_p["is_up"])] = s_p["pattern"]
 
-        merged_questions = merged.values()
-        return merged_questions
+        merged_array = []
+        for key in merged:
+            c = {"type": key}
+            c.update(merged[key])
+            merged_array.append(c)
+
+        return merged_array
 
     def make_question(self, track, tracks):
         cr_targets = map(lambda ct: ct.name, self.get_targets())
         attr_for_pupular = [u"comment_count", u"download_count", u"playback_count", u"favoritings_count"]
-        words = []
-        pure_words = []
+        result = []
 
         def has_popular_attr():
             matches = map(lambda t: 1 if t in cr_targets else 0, attr_for_pupular)
             return sum(matches) > 0
 
-        clusters, vectors = vector_utils.make_text_clusters(map(lambda t: t.tag_tokens(), tracks))
-        target_vector = vector_utils.classify_text_tokens(track.tag_tokens(), clusters)
+        # clusters, vectors = vector_utils.make_text_clusters(map(lambda t: t.tag_tokens(), tracks))
+        # target_vector = vector_utils.classify_text_tokens(track.tag_tokens(), clusters)
 
         if has_popular_attr():
-            if self.is_positive():
-                words.append(u"popular")
-            else:
-                words.append(u"minor")
+            result.append({"pattern": self.pattern, "type": u"Popularity", "is_up": self.is_positive()})
 
         if u"elapsed" in cr_targets:
-            words.append(u"recent")
+            result.append({"pattern": self.pattern, "type": u"Created at", "is_up": self.is_positive()})
 
+        """
         if u"bpm" in cr_targets:
             if self.is_positive():
                 words.append(u"fast")
             else:
                 words.append(u"slow")
+        """
 
         if u"genre_score" in cr_targets:
-            #todo change term by genre_score
-            words.append(u"active track" if self.is_positive() else u"calm track")
+            genre = Track.score_to_genre(track.genre_score())
+            result.append({"pattern": self.pattern, "type": u"Vibration", "is_up": self.is_positive()})
+        elif u"genre" in cr_targets:
+            result.append({"pattern": self.pattern, "type": u"Vibration", "is_up": self.is_positive()})
 
+        """
         if u"tag_tokens" in cr_targets:
             target_clusters = target_vector if self.is_positive() else map(lambda t: 1 if t == 0 else 0, target_vector)
             next_clusters = vector_utils.get_item_in_vector(clusters, target_clusters)
             if len(next_clusters) > 0:
                 pure_words.append(next_clusters[0])
+        """
 
-        text = u""
-        if len(words) > 0:
-            text += u"more" if self.is_positive() else u"less"
-            text += u" " + u" and ".join(words)
-
-        if len(pure_words) > 0:
-            text += (u" and " if len(words) > 0 else u"") + u" and ".join(pure_words)
-
-        if len(text) > 0:
-            text = u"Do you like {0} track?".format(text)
-
-        return {
-            "pattern": self.pattern,
-            "text": text
-        }
+        return result

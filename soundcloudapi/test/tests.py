@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 from django.test import TestCase
 from soundcloudapi.views import RecommendApi
-from soundcloudapi.models import Track, TrackCriticize, TrackCriticizePattern, TrackCriticizeType
+from soundcloudapi.models import Track, TrackCriticizeType, ParameterAdapter
+import json
 import random
 
 
@@ -17,94 +18,56 @@ def print_title(test_case):
 class TrackTestCase(TestCase):
 
     def setUp(self):
-        self.tracks = []
-        track = Track()
-        tracks = track.find({"genre": u"rock", "created_at": {"from": "2014-01-01 00:00:00"}, "limit": 100})
-        self.print_tracks(tracks[:10], lambda t: self.tracks.append(t))
+        self.tracks = Track().find({"q": u"the Hiatus", "created_at": {"from": "2014-01-01 00:00:00"}, "limit": 100})
+        self.tracks = sorted(self.tracks, key=lambda t: t.playback_count, reverse=True)
 
     @print_title
-    def serialize_tracks(self):
-        Track().load_dict(self.tracks)
-
-    @print_title
-    def test_evaluate_init(self):
-        evaluated = RecommendApi.evaluate(self.tracks, None)
-        self.print_tracks(evaluated[:10])
-
-    @print_title
-    def test_make_criticize_pattern(self):
+    def test_criticize_by_parameter(self):
+        pa = ParameterAdapter()
         selected_track = random.sample(self.tracks, 1)[0]
-        patterns = RecommendApi.make_criticize_pattern(selected_track.id, self.tracks)
-        for p in [p.to_dict() for p in patterns]:
-            print(p["pattern"], p["text"])
+
+        # by parameter
+        criticize_type = TrackCriticizeType.Parameter
+        post_parameters = {u"bpm": u"123"}  # dummy bpm value
+        parameters = pa.request_to_parameters(criticize_type, selected_track, post_parameters)
+
+        print(map(lambda p: p.__str__(), parameters))
+
+        scored = RecommendApi.get_scored_tracks(parameters, selected_track, self.tracks)
+        print("tracks: {0}".format(len(scored)))
+        self.print_tracks(map(lambda s: s.item, scored[:10]))
 
     @print_title
-    def test_evaluate_with_criticize(self):
+    def test_criticize_by_pattern(self):
+        pa = ParameterAdapter()
         selected_track = random.sample(self.tracks, 1)[0]
-        patterns = RecommendApi.make_criticize_pattern(selected_track.id, self.tracks)
-
-        selected_pattern = random.sample(patterns, 1)[0]
-        criticize = TrackCriticize(selected_track.id, TrackCriticizeType.Pattern, selected_pattern.pattern)
-
-        evaluated = RecommendApi.evaluate(self.tracks, criticize)
-
-        print("selected item -------------------------")
-        self.print_tracks([selected_track])
-        print("selected pattern -------------------------")
-        print(criticize.value)
-        print("evaluated as below -------------------------")
-        self.print_tracks(evaluated[:10])
-
-    @print_title
-    def test_genre_to_score(self):
-        self.assertEqual(Track.genre_to_score(u"Death Metal"), Track.genre_to_score(u"metal"))
-
-    @print_title
-    def test_make_criticize_by_parameter(self):
-        selected_record = random.sample(self.tracks, 1)[0]
 
         # by parameter
-        track_id = selected_record.id
-        value = {u"bpm": u"123"}  # dummy bpm value
-        parameter_criticism = TrackCriticize(track_id, TrackCriticizeType.Parameter, value)
+        criticize_type = TrackCriticizeType.Pattern
+        evaluator = Track.make_evaluator()
+        criticize_patterns = evaluator.make_pattern(self.tracks, selected_track)
 
-        parameters = parameter_criticism.make_parameters()
-        print(parameters)
-        self.assertEqual(parameters[u"bpm"], value[u"bpm"])
+        pattern = random.sample(criticize_patterns, 1)[0]
+        post_parameters = {u"pattern": pattern.pattern}
+        parameters = pa.request_to_parameters(criticize_type, selected_track, post_parameters)
 
-        conditions = parameter_criticism.make_conditions()
-        print(conditions)
-        self.assertEqual(conditions[u"bpm"]["from"], int(value[u"bpm"]) - 20)
-        self.assertEqual(conditions[u"bpm"]["to"], int(value[u"bpm"]) + 20)
+        print(map(lambda p: p.__str__(), parameters))
 
-    @print_title
-    def test_make_criticize_by_pattern(self):
-        selected_record = random.sample(self.tracks, 1)[0]
-
-        # by parameter
-        track_id = selected_record.id
-        value = u"-:genre, elapsed"
-        pattern_criticism = TrackCriticize(track_id, TrackCriticizeType.Pattern, value)
-
-        parameters = pattern_criticism.make_parameters()
-        print(parameters)
-
-        conditions = pattern_criticism.make_conditions()
-        print(conditions)
+        scored = RecommendApi.get_scored_tracks(parameters, selected_track, self.tracks)
+        print("tracks: {0}".format(len(scored)))
+        self.print_tracks(map(lambda s: s.item, scored[:10]))
 
     @print_title
-    def test_make_criticize_by_track(self):
-        selected_record = random.sample(self.tracks, 1)[0]
+    def test_criticize_by_like(self):
+        pa = ParameterAdapter()
+        selected_track = random.sample(self.tracks, 1)[0]
 
         # by parameter
-        track_id = selected_record.id
-        track_criticism = TrackCriticize(track_id, TrackCriticizeType.Like)
+        criticize_type = TrackCriticizeType.Like
+        scored = RecommendApi.get_favorite_tracks([], selected_track, self.tracks)
+        print("tracks: {0}".format(len(scored)))
+        self.print_tracks(map(lambda s: s.item, scored[:10]))
 
-        parameters = track_criticism.make_parameters()
-        print(parameters)
-
-        conditions = track_criticism.make_conditions()
-        print(conditions)
 
     def print_tracks(self, tracks, foreach=None):
         for t in tracks:

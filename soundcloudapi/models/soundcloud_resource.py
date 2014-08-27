@@ -19,6 +19,7 @@ class SoundCloudResource(object):
         if name in self.obj:
             return self.obj.get(name)
         else:
+            # avoid exception
             return None
 
     def fields(self):

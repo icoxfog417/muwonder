@@ -48,7 +48,6 @@ $(function(){
         self.liked = ko.observableArray([]);
         self.trackIndex = ko.observable(0);
         self.criticize = ko.observableArray([]);
-        self.criticizeIndex = ko.observable(0);
         self.isPlaying = ko.observable(false);
         self.isConnect = ko.observable(false);
         self.history = [];
@@ -62,6 +61,7 @@ $(function(){
         }
         self.session_template = {
             message : "message-template",
+            question : "question-template",
             criticize : "criticize-template",
             playlist : "playlist-template"
         }
@@ -209,7 +209,6 @@ $(function(){
             var data = {"track_id": self.tracks()[self.trackIndex()].item.id};
             var success = function(patterns){
                             if(patterns && patterns.length > 0){
-                                self.criticizeIndex(0)
                                 self.criticize.removeAll();
                                 patterns.forEach(function(item){
                                   self.criticize.push(item);
@@ -272,7 +271,7 @@ $(function(){
                     if(self.liked().length > 0){
                         return self.liked;
                     }else{
-                        self.showGuide(self.guide_mode.message, {message: "You haven't liked any tracks."});
+                        self.showGuide(self.guide_mode.message, {message: "You haven't had favorite tracks."});
                         return self.tracks;
                     }
                     break;
@@ -308,7 +307,7 @@ $(function(){
 
             var ctx = $("#trackRaderChart").get(0).getContext("2d");
             var graphData = {
-                labels: ["Loudness", "PlayBack", "Like", "Download", "Comments", "Recent"],
+                labels: ["Vibration", "PlayBack", "Favorites", "Download", "Comments", "Recent"],
                 datasets: [
                     {
                         label: "Track Detail",
@@ -449,21 +448,21 @@ $(function(){
             var isModeUpdate = true;
 
             if(mode == self.guide_mode.pattern && self.criticize().length > 0){
-                self.setSession(self.session_template.criticize, self.criticize()[self.criticizeIndex()]);
+                self.setSession(self.session_template.criticize, self.criticize());
             }else if(mode == self.guide_mode.parameter){
-                self.setSession(self.session_template.criticize, {text: "Oh, do you like this " + option.parameter + " beat!?", option:option});
+                self.setSession(self.session_template.question, {message: "Oh, do you like this " + option.parameter + " beat!?", option:option});
             }else if(mode == self.guide_mode.like){
-                self.setSession(self.session_template.criticize, {text: "Would you like similar tracks?"});
+                self.setSession(self.session_template.question, {message: "Would you like similar tracks?"});
             }else if(mode == self.guide_mode.playlist){
                 if(self.liked().length > 0){
                     self.setSession(self.session_template.playlist, option);
                 }else{
-                    self.setSession(self.session_template.message, {message: "You can make playlist by your liked tracks."});
+                    self.setSession(self.session_template.message, {message: "You can make playlist by your favorite tracks."});
                 }
             }else if(mode == self.guide_mode.message){
                 self.setSession(self.session_template.message, option);
             }else if(mode == self.guide_mode.reload){
-                self.setSession(self.session_template.criticize, {text: "Shall I show another tracks?"});
+                self.setSession(self.session_template.question, {message: "Shall I show another tracks?"});
             }else if(mode == self.guide_mode.retry){
                 self.guide.confusing();
                 self.setSession(self.session_template.message, option);
@@ -498,7 +497,7 @@ $(function(){
                         break;
                     case self.guide_mode.pattern:
                         data.criticize_type = self.criticize_type.pattern;
-                        data.parameters["pattern"] = self.criticize()[self.criticizeIndex()].pattern;
+                        data.parameters["pattern"] = option;
                         self.getTracks(msg, data);
                         break;
                     case self.guide_mode.parameter:
@@ -513,21 +512,7 @@ $(function(){
                 }
 
             }else{
-                switch(self.guideMode()){
-                    case self.guide_mode.pattern:
-                        var next = self.criticizeIndex() + 1;
-                        if(next < self.criticize().length){
-                            self.criticizeIndex(next);
-                            self.showGuide(self.guide_mode.pattern);
-                        }else{
-                            self.criticizeIndex(0);
-                            self.showGuide(self.guide_mode.reload);
-                        }
-                        break;
-                    default:
-                        self.ask();
-                        break;
-                }
+                self.ask();
             }
         }
 
