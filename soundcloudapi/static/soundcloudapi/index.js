@@ -45,8 +45,9 @@ $(function(){
         self.behaviorWatcher = new BehaviorWatcher();
 
         self.tracks = ko.observableArray([]);
-        self.liked = ko.observableArray([]);
         self.trackIndex = ko.observable(0);
+        self.liked = ko.observableArray([]);
+        self.likedIndex = ko.observable(0);
         self.criticize = ko.observableArray([]);
         self.isPlaying = ko.observable(false);
         self.isConnect = ko.observable(false);
@@ -190,7 +191,16 @@ $(function(){
 
                     self.listMode(self.content_mode.track);
                     self.contentMode(self.content_mode.track);
-                    self.widgetLoadByIndex(0);
+                    if(!self.isPlaying()){
+                        self.widgetLoadByIndex(0);
+                    }else{
+                        var newIndex = self.getTrackIndex(self.trackInWidget.item.id);
+                        if(newIndex > -1){
+                            self.setTrackIndex(newIndex);
+                        }else{
+                            self.setTrackIndex(0);
+                        }
+                    }
                 }
                 self.guideMode(self.guide_mode.none);
             }
@@ -209,7 +219,7 @@ $(function(){
         }
 
         self.getPatterns = function(){
-            var data = {"track_id": self.tracks()[self.trackIndex()].item.id};
+            var data = {"track_id": self.getSelected().item.id};
             var success = function(patterns){
                             if(patterns && patterns.length > 0){
                                 self.criticize.removeAll();
@@ -268,22 +278,13 @@ $(function(){
         self.getTrackList = function(){
             switch(self.listMode()){
                 case self.content_mode.track:
-                    $(self.$PLAYLIST_MAKE_ICON).fadeOut();
                     return self.tracks;
                     break;
                 case self.content_mode.like:
-                    if(self.liked().length > 0){
-                        if(self.isConnect() && !$(self.$PLAYLIST_MAKE_ICON).is(":visible")){
-                            $(self.$PLAYLIST_MAKE_ICON).fadeIn();
-                        }
-                        return self.liked;
-                    }else{
-                        self.showGuide(self.guide_mode.message, {message: "You haven't had favorite tracks."});
-                        return self.tracks;
-                    }
+                    return self.liked;
                     break;
             }
-            return function(){return [];};
+            return function(){return [];}; //emulate observable array
         };
         self.observeTrackList = ko.computed(self.getTrackList);
 
@@ -336,7 +337,7 @@ $(function(){
         */
         self.trackStyle = function(index){
             var css = "track";
-            if(index == self.trackIndex()){
+            if(index == self.getTrackIndex()){
                 css += " active";
             }
             return css;
@@ -346,28 +347,29 @@ $(function(){
          handle client event
          */
         self.toggleListMode = function(){
-            var setToIndex = function(fromList, toList, index){
-                if(index() < fromList().length && fromList()[index()] !== undefined){
-                    var toIndex = self._getIndex(fromList()[index()].item.id, toList());
-                    toIndex = toIndex > -1 ? toIndex : 0;
-                    index(toIndex);
-                }else{
-                    index(0);
-                }
-            }
-
             switch(self.listMode()){
                 case self.content_mode.track:
-                    setToIndex(self.tracks, self.liked, self.trackIndex);
-                    self.listMode(self.content_mode.like);
+                    if(self.liked().length > 0){
+                        if(self.isConnect() && !$(self.$PLAYLIST_MAKE_ICON).is(":visible")){
+                            $(self.$PLAYLIST_MAKE_ICON).fadeIn();
+                        }
+                        self.listMode(self.content_mode.like);
+                    }else{
+                        self.showGuide(self.guide_mode.message, {message: "You haven't had favorite tracks."});
+                    }
                     break;
                 default:
-                    setToIndex(self.liked, self.tracks, self.trackIndex);
+                    $(self.$PLAYLIST_MAKE_ICON).fadeOut();
                     self.listMode(self.content_mode.track);
                     break;
             }
         }
 
+        self.isLiked = function(trackId){
+            return self._getIndex(trackId, self.liked()) > -1;
+        }
+
+        /*
         self.toggleContentMode = function(){
             switch(self.contentMode()){
                 case self.content_mode.track:
@@ -377,18 +379,52 @@ $(function(){
                     self.contentMode(self.content_mode.track);
                     break;
             }
+        }*/
+
+        self.getTrackIndex = function(trackId, contentMode){
+            var isSearch = false;
+            var mode = contentMode;
+            if(trackId !== undefined && trackId != null && trackId != ""){
+                isSearch = true;
+            }
+            if(mode === undefined){
+                mode = self.listMode();
+            }
+
+            switch(mode){
+                case self.content_mode.track:
+                    return isSearch ? self._getIndex(trackId, self.tracks()) : self.trackIndex();
+                    break;
+                default:
+                    return isSearch ? self._getIndex(trackId, self.liked()) : self.likedIndex();
+                    break;
+            }
+            return -1;
         }
 
-        self.getTrackIndex = function(trackId){
-            return self._getIndex(trackId, self.tracks());
-        }
+        self.setTrackIndex = function(index){
+            var result = index;
+            var target = self.getTrackList();
 
-        self.getLikedIndex = function(trackId){
-            return self._getIndex(trackId, self.liked());
+            if(index >= target().length){
+                result = 0;
+            }else if(index < 0){
+                result = target().length - 1;
+            }
+
+            switch(self.listMode()){
+                case self.content_mode.track:
+                    self.trackIndex(result);
+                    break;
+                default:
+                    self.likedIndex(result);
+                    break;
+            }
+            return result;
         }
 
         self.getSelected = function(){
-            return self.getTrackList()()[self.trackIndex()];
+            return self.getTrackList()()[self.getTrackIndex()];
         }
 
         self._getIndex = function(trackId, trackArray){
@@ -409,13 +445,13 @@ $(function(){
         }
 
         self.toggleLike = function(){
-            var selected = self.getSelected();
             var trackIndex = -1;
+            var selected = self.getSelected();
             if(self.trackInWidget != null){
                 selected = self.trackInWidget;
-                trackIndex = self.getLikedIndex(selected.item.id);
-            }else if(selected !== undefined){
-                trackIndex = self.getLikedIndex(selected.item.id);
+            }
+            if(selected !== undefined){
+                trackIndex = self._getIndex(selected.item.id, self.liked());
             }
 
             if(trackIndex < 0){
@@ -429,9 +465,17 @@ $(function(){
          * for criticize
          */
         self.ask = function(){
+            if(self.guideMode() != self.guide_mode.none){
+                self.showGuide(self.guide_mode.none);
+            }else{
+                self.showGuide(self.conversation());
+            }
+        }
+
+        self.conversation = function(){
             self.guide.waiting(true);
             var guideSequence = [self.guide_mode.reload, self.guide_mode.none];
-            if(self.getLikedIndex() > -1 || self.isPlaying()){
+            if(self.isLiked(self.getSelected().item.id) || self.isPlaying()){
                 guideSequence.unshift(self.guide_mode.like, self.guide_mode.pattern);
             }
             var guideNow = guideSequence.indexOf(self.guideMode());
@@ -496,7 +540,7 @@ $(function(){
 
                 switch(self.guideMode()){
                     case self.guide_mode.like:
-                        if(self.getLikedIndex(selected.item.id) == -1){
+                        if(!self.isLiked(selected.item.id)){
                             self.toggleLike();
                         }
                         data.criticize_type = self.criticize_type.like;
@@ -519,7 +563,7 @@ $(function(){
                 }
 
             }else{
-                self.ask();
+                self.conversation();
             }
         }
 
@@ -571,21 +615,15 @@ $(function(){
         }
 
         self.widgetMove = function(isNext){
-            var index = self.trackIndex();
+            var index = self.getTrackIndex();
             if(isNext){
                 index += 1;
             }else{
                 index -= 1;
             }
 
-            if(index >= self.getTrackList()().length){
-                index = 0;
-            }else if(index < 0){
-                index = self.getTrackList()().length - 1;
-            }
-
             self.behaviorWatcher.resetHandler(self.behaviorKind.askAboutTrack, 0);
-            self.trackIndex(index);
+            self.setTrackIndex(index);
             self.widgetLoadByIndex();
         }
 
@@ -593,7 +631,7 @@ $(function(){
             var track = null;
             if(index > -1){
                 track = self.getTrackList()()[index];
-                self.trackIndex(index);
+                self.setTrackIndex(index);
             }else{
                 track = self.getSelected();
             }
@@ -621,6 +659,14 @@ $(function(){
                             self.behaviorWatcher.detect(self.behaviorKind.askAboutTrack);
                         }
                     })
+                })
+                self._widget.bind(SC.Widget.Events["FINISH"],function(){
+                    self.isPlaying(true);
+                    if(self.getSelected().item.id != self.trackInWidget.item.id){
+                        self.widgetLoadByIndex();
+                    }else{
+                        self.widgetMove(true);
+                    }
                 })
             }
 

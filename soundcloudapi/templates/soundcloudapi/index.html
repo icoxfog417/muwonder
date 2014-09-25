@@ -52,7 +52,7 @@
             <div data-bind="foreach: observeTrackList()" style="height:100%;overflow:auto">
                 <div data-bind="attr: {'class': $root.trackStyle($index()) }, click:function(){ $root.widgetLoadByIndex($index()) }">
                     <img class="pure-img" style="float:left;" data-bind="attr: { src: item.artwork_url }" />
-                    <div style="float:left;font-size:15px;margin-left:10px;" data-bind="visible: $root.getLikedIndex(item.id) > -1">
+                    <div style="float:left;font-size:15px;margin-left:10px;" data-bind="visible: $root.isLiked(item.id)">
                         <i class="fa fa-heart" style="color:coral"></i>
                     </div>
                     <br style="clear:both">
