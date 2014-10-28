@@ -208,7 +208,7 @@ class ParameterAdapter(object):
         default_condition["created_at"] = {"from": base_date.strftime("%Y-%m-%d %H:%M:%S")}
 
         random_score = random.uniform(-1, 1)
-        random_genres = Track.score_to_genres(random_score, 5)
+        random_genres = Track.score_to_genres(random_score, 1)
         default_condition["genres"] = u",".join(random_genres)
 
         default_condition["filter"] = u"streamable"
