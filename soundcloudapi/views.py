@@ -70,9 +70,9 @@ class RecommendApi(object):
             if limit > 0:
                 serialized_evaluated = serialized_evaluated[:limit]
 
-            response = json.dumps(serialized_evaluated)
+            response = serialized_evaluated
 
-        return HttpResponse(response, content_type="application/json")
+        return HttpResponse(json.dumps(response), content_type="application/json")
 
     @classmethod
     def get_scored_tracks(cls, parameters, track, initial_tracks):
