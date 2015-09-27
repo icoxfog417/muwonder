@@ -3,9 +3,9 @@ from django.conf.urls.static import static
 import re
 from datetime import datetime
 from knowbre.item_evaluator import ItemEvaluator, EvaluationType
-from json_serialiable import JsonSerializable
-import soundcloud_client
-from soundcloud_resource import SoundCloudResource
+from json_serializable import JsonSerializable
+from soundcloudapi.service import soundcloud_client
+from soundcloudapi.models import SoundCloudResource
 
 
 # Create your models here.
@@ -29,8 +29,8 @@ class Track(JsonSerializable):
         self.artwork_url = ""
         self.description = ""
         self.genre = ""
-        self.genre_score = lambda: self.genre_to_score(self.genre + u" " + self.tag_list)
-        self.tag_list = u""
+        self.genre_score = lambda: self.genre_to_score(self.genre + " " + self.tag_list)
+        self.tag_list = ""
         self.tag_tokens = lambda: self.tag_list_to_tokens(self.tag_list)
         self.track_type = ""
         self.bpm = 0
@@ -50,7 +50,7 @@ class Track(JsonSerializable):
         self.title = item.title
         self.permalink_url = item.permalink_url
         self.description = item.description
-        self.genre = item.genre if item.genre else u""
+        self.genre = item.genre if item.genre else ""
         self.tag_list = item.tag_list
         self.track_type = item.track_type
         self.bpm = item.bpm
@@ -77,12 +77,12 @@ class Track(JsonSerializable):
         double_quoted = p.findall(tag_list)
         exclude_double_quoted = tag_list
         for dq in double_quoted:
-            exclude_double_quoted = exclude_double_quoted.replace(dq, u"")
+            exclude_double_quoted = exclude_double_quoted.replace(dq, "")
 
         tokens = exclude_double_quoted.split()
         tokens = filter(None, map(lambda t: t.strip(), tokens))
         if len(double_quoted) > 0:
-            tokens += map(lambda t: t.replace(u'"', u""), double_quoted)
+            tokens += map(lambda t: t.replace(u'"', ""), double_quoted)
 
         return tokens
 
@@ -160,7 +160,7 @@ class Track(JsonSerializable):
 
         def get_score(word):
             s = None
-            for w in [word, word.replace(u"-", u" ")]:
+            for w in [word, word.replace("-", " ")]:
                 if word in genres:
                     s = genres[w]
                 else:
@@ -176,7 +176,7 @@ class Track(JsonSerializable):
         if target_genre in genres:
             score = genres[target_genre]
         else:
-            genre_words = target_genre.split(u",")
+            genre_words = target_genre.split(",")
             for genre_word in genre_words:
                 score = get_score(genre_word.strip())
                 if score:
@@ -187,42 +187,42 @@ class Track(JsonSerializable):
     @classmethod
     def get_genres(cls):
         genres = {
-            u"metal": 1,
-            u"disco": 0.95,
-            u"dance": 0.9,
-            u"hip hop": 0.85,
-            u"rap": 0.84,
-            u"progressive house": 0.8,
-            u"house": 0.77,
-            u"trap": 0.71,
-            u"trip hop": 0.7,
-            u"r&b": 0.65,
-            u"soul": 0.6,
-            u"latin": 0.55,
-            u"reggae": 0.5,
-            u"dj": 0.45,
-            u"hardcore techno": 0.4,
-            u"techno": 0.39,
-            u"trance": 0.38,
-            u"minimal techno": 0.36,
-            u"tech house": 0.35,
-            u"remix": 0.33,
-            u"electro": 0.31,
-            u"electronic": 0.3,
-            u"alternative rock": 0.2,
-            u"indie rock": 0.18,
-            u"punk": 0.15,
-            u"rock": 0.1,
-            u"pop": 0,
-            u"singer-songwriter": -0.1,
-            u"jazz": -0.15,
-            u"dubstep": -0.4,
-            u"deep house": -0.5,
-            u"bass": -0.6,
-            u"ambient": -0.65,
-            u"folk": -0.7,
-            u"country": -0.75,
-            u"piano": -0.9,
-            u"classical": -1
+            "metal": 1,
+            "disco": 0.95,
+            "dance": 0.9,
+            "hip hop": 0.85,
+            "rap": 0.84,
+            "progressive house": 0.8,
+            "house": 0.77,
+            "trap": 0.71,
+            "trip hop": 0.7,
+            "r&b": 0.65,
+            "soul": 0.6,
+            "latin": 0.55,
+            "reggae": 0.5,
+            "dj": 0.45,
+            "hardcore techno": 0.4,
+            "techno": 0.39,
+            "trance": 0.38,
+            "minimal techno": 0.36,
+            "tech house": 0.35,
+            "remix": 0.33,
+            "electro": 0.31,
+            "electronic": 0.3,
+            "alternative rock": 0.2,
+            "indie rock": 0.18,
+            "punk": 0.15,
+            "rock": 0.1,
+            "pop": 0,
+            "singer-songwriter": -0.1,
+            "jazz": -0.15,
+            "dubstep": -0.4,
+            "deep house": -0.5,
+            "bass": -0.6,
+            "ambient": -0.65,
+            "folk": -0.7,
+            "country": -0.75,
+            "piano": -0.9,
+            "classical": -1
         }
         return genres

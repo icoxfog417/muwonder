@@ -1,11 +1,12 @@
+import json
+from time import sleep
+
 from django.http import HttpResponse, HttpResponseRedirect
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.shortcuts import render
-import json
-import random
-from urllib2 import HTTPError
-from time import sleep
-from soundcloudapi.models import Track, User, soundcloud_client
+from urllib.error import HTTPError
+from soundcloudapi.models import Track, User
+from soundcloudapi.service import soundcloud_client
 from soundcloudapi.models import TrackCriticizePattern, TrackCriticizeType, Parameter, ParameterAdapter
 
 
@@ -31,7 +32,7 @@ class RecommendApi(object):
             request_body = request.body
 
         posted = json.loads(request_body)
-        posted_parameters = {} if not u"parameters" in posted else posted[u"parameters"]
+        posted_parameters = {} if not "parameters" in posted else posted["parameters"]
 
         # process by methods
         if request.method == "GET":
@@ -43,8 +44,8 @@ class RecommendApi(object):
             tracks = cls.get_scored_tracks(parameters, None, [])
 
         else:
-            track_id = posted[u"track_id"]
-            criticize_type = TrackCriticizeType(posted[u"criticize_type"])
+            track_id = posted["track_id"]
+            criticize_type = TrackCriticizeType(posted["criticize_type"])
             track = cls.__get_track(track_id, tracks)
             tracks = cls.__get_session_tracks(request)  # get from session
 
@@ -61,11 +62,11 @@ class RecommendApi(object):
 
         if len(tracks) > 0:
             # to dictionary
-            serialized_evaluated = map(lambda s: {"score": s.score, "item": s.item.to_dict(), "score_detail": s.score_detail}, tracks)
+            serialized_evaluated = [{"score": s.score, "item": s.item.to_dict(), "score_detail": s.score_detail} for s in tracks]
 
             # store to session
-            SessionManager.set_session(request, SessionManager.TRACK_SESSION, map(lambda s: s["item"], serialized_evaluated))
-            SessionManager.add_session(request, SessionManager.CRITICIZE_SESSION, map(lambda p: p.to_dict(), parameters))
+            SessionManager.set_session(request, SessionManager.TRACK_SESSION, [s["item"] for s in serialized_evaluated])
+            SessionManager.add_session(request, SessionManager.CRITICIZE_SESSION, [p.to_dict() for p in parameters])
 
             if limit > 0:
                 serialized_evaluated = serialized_evaluated[:limit]
@@ -93,11 +94,11 @@ class RecommendApi(object):
                     tracks += initial_tracks
 
                 new_tracks = finder.find(conditions)
-                tracks += filter(lambda t: t.id not in [t.id for t in tracks], new_tracks)
+                tracks += list(filter(lambda t: t.id not in [t.id for t in tracks], new_tracks))
 
                 # filter by inputed parameters
                 if track:
-                    tracks = filter(lambda t: pa.filter_by_parameters(parameters, track, t), tracks)
+                    tracks = list(filter(lambda t: pa.filter_by_parameters(parameters, track, t), tracks))
 
             except HTTPError as ex:
                     pass
@@ -140,8 +141,8 @@ class RecommendApi(object):
 
                 if len(favoriters) > trial_count:
                     new_tracks = favoriters[trial_count].item.get_favorites()
-                    tracks += filter(lambda t: t.id not in [t.id for t in tracks], new_tracks)
-                    tracks = filter(lambda t: pa.filter_by_parameters(parameters, track, t), tracks)
+                    tracks += list(filter(lambda t: t.id not in [t.id for t in tracks], new_tracks))
+                    tracks = list(filter(lambda t: pa.filter_by_parameters(parameters, track, t), tracks))
 
             except HTTPError as ex:
                 pass
@@ -164,7 +165,7 @@ class RecommendApi(object):
     def get_criticize_pattern(cls, request):
         if request.method == "POST":
             posted = json.loads(request.body)
-            track_id = posted[u"track_id"]
+            track_id = posted["track_id"]
 
             tracks = cls.__get_session_tracks(request)
             track = cls.__get_track(track_id, tracks)
@@ -267,26 +268,26 @@ def disconnect(request):
 
 
 def make_playlist(request):
-    result = {"result": False, "message": u""}
+    result = {"result": False, "message": ""}
 
     if SessionManager.SOUNDCLOUD_ACCESS_TOKEN in request.session:
         token = SessionManager.get_session(request, SessionManager.SOUNDCLOUD_ACCESS_TOKEN)
         client = soundcloud_client.create_by_token(token)
 
         posted = json.loads(request.body)
-        title = posted.get(u"title")
-        sharing = posted.get(u"sharing")
-        liked = posted.get(u"liked")
+        title = posted.get("title")
+        sharing = posted.get("sharing")
+        liked = posted.get("liked")
 
         try:
             if not title:
-                raise Exception(u"title is missing.")
+                raise Exception("title is missing.")
 
             if not sharing:
-                raise Exception(u"sharing is missing.")
+                raise Exception("sharing is missing.")
 
             if not liked or len(liked) == 0:
-                raise Exception(u"liked tracks are missing.")
+                raise Exception("liked tracks are missing.")
             else:
                 liked = map(lambda t: dict(id=int(t)), liked)
 
@@ -306,6 +307,6 @@ def make_playlist(request):
             result["message"] = ex.message
 
     else:
-        result["message"] = u"You have to login to sound cloud."
+        result["message"] = "You have to login to sound cloud."
 
     return HttpResponse(json.dumps(result), content_type="application/json")

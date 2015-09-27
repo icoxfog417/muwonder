@@ -12,7 +12,7 @@ class VectorUtilTestCase(unittest.TestCase):
 
     def test_classify_text_token(self):
         classified = vector_utils.make_text_clusters([["AAA", "BBB", "CCC"], ["AAA", "ZZZ"], ["aaa", "BBB", "CCC"]])
-        print classified
+        print(classified)
 
     def test_calc_vector_distance(self):
         distance = vector_utils.calc_vector_distance([0, 0], [1, 1])

@@ -1,6 +1,6 @@
-from .soundcloud_resource import SoundCloudResource
-from .track import Track
-from .user import User
-from .track_criticize_pattern import TrackCriticizeType
-from .parameter_adapter import Parameter, ParameterAdapter
-from .track_criticize_pattern import TrackCriticizePattern
+from soundcloudapi.models.soundcloud_resource import SoundCloudResource
+from soundcloudapi.models.track import Track
+from soundcloudapi.models.user import User
+from soundcloudapi.models.track_criticize_pattern import TrackCriticizeType
+from soundcloudapi.models.parameter_adapter import Parameter, ParameterAdapter
+from soundcloudapi.models.track_criticize_pattern import TrackCriticizePattern

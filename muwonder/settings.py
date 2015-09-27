@@ -10,7 +10,6 @@ https://docs.djangoproject.com/en/1.6/ref/settings/
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 import os
-import secret_settings
 BASE_DIR = os.path.dirname(os.path.dirname(__file__))
 
 
@@ -18,7 +17,9 @@ BASE_DIR = os.path.dirname(os.path.dirname(__file__))
 # See https://docs.djangoproject.com/en/1.6/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = secret_settings.SECRET_KEY
+from envs import Variable
+V = Variable()
+SECRET_KEY = V.secret_key
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -58,7 +59,7 @@ WSGI_APPLICATION = 'muwonder.wsgi.application'
 # https://docs.djangoproject.com/en/1.6/ref/settings/#databases
 DATABASES = {}
 import dj_database_url
-DATABASES = {'default': dj_database_url.config(default='postgres://{0}:{1}@localhost:5432/muwonder'.format(secret_settings.DATABASE_USER,secret_settings.DATABASE_PASSWORD))}
+DATABASES = {'default': dj_database_url.config(default='postgres://{0}:{1}@localhost:5432/muwonder'.format(V.database_user, V.database_password))}
 
 # Internationalization
 # https://docs.djangoproject.com/en/1.6/topics/i18n/
@@ -84,7 +85,6 @@ STATIC_URL = '/static/'
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 # Static asset configuration
-import os
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_ROOT = 'staticfiles'
 STATICFILES_DIRS = (

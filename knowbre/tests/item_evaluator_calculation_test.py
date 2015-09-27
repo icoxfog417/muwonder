@@ -1,10 +1,9 @@
-from __future__ import division
-from item_evaluator_test import EvaluateItem, print_title
-from knowbre import ItemEvaluator, CriticizePattern
 import unittest
-from datetime import datetime, timedelta
 import random
 import math
+from datetime import datetime, timedelta
+from knowbre.tests.item_evaluator_test import EvaluateItem, print_title
+from knowbre.item_evaluator import ItemEvaluator
 
 
 class EvaluationTestCase(unittest.TestCase):
@@ -22,8 +21,8 @@ class EvaluationTestCase(unittest.TestCase):
         evaluator = self.__get_ruled_evaluator()
         scores = evaluator.calc_score(data, selected)
         for scored in scores:
-            print "score= bpm {0}, reviews {1}, elapsed {2} -> {3}.".format(scored.item.bpm, scored.item.reviews, scored.item.elapsed(), scored.score)
-            print scored.score_detail
+            print("score= bpm {0}, reviews {1}, elapsed {2} -> {3}.".format(scored.item.bpm, scored.item.reviews, scored.item.elapsed(), scored.score))
+            print(scored.score_detail)
 
     @print_title
     def test_calc_score_with_weight(self):
@@ -39,7 +38,7 @@ class EvaluationTestCase(unittest.TestCase):
             self.assertLess(
                 abs(default_scores[index].score_detail["bpm"] * 1.5 + default_scores[index].score_detail["reviews"] * 0.5 + default_scores[index].score_detail["elapsed"]
                     - scored.score), 1 / pow(10, 5))
-            print "score= bpm {0}, reviews {1}, elapsed {2} -> {3}.".format(scored.item.bpm, scored.item.reviews, scored.item.elapsed(), scored.score)
+            print("score= bpm {0}, reviews {1}, elapsed {2} -> {3}.".format(scored.item.bpm, scored.item.reviews, scored.item.elapsed(), scored.score))
 
     @print_title
     def test_calc_score_with_none(self):
@@ -49,7 +48,7 @@ class EvaluationTestCase(unittest.TestCase):
         evaluator = self.__get_ruled_evaluator()
         scores = evaluator.calc_score(data, selected)
         for scored in scores:
-            print "score= bpm {0}, reviews {1}, elapsed {2} -> {3}.".format(scored.item.bpm, scored.item.reviews, scored.item.elapsed(), scored.score)
+            print("score= bpm {0}, reviews {1}, elapsed {2} -> {3}.".format(scored.item.bpm, scored.item.reviews, scored.item.elapsed(), scored.score))
 
     def __get_ruled_evaluator(self):
         evaluator = ItemEvaluator()
@@ -70,7 +69,7 @@ class EvaluationTestCase(unittest.TestCase):
 
         patterns = evaluator.make_pattern(data, selected)
         for p in patterns:
-            print p
+            print(p)
             self.assertLess(abs(p.score - self.__calculate_pattern_percentage(p, selected, data)), 1 / pow(10, 5))
 
     def __calculate_pattern_percentage(self, pattern, selected, test_cases):
@@ -110,7 +109,7 @@ class EvaluationTestCase(unittest.TestCase):
                 release_date_median + timedelta(days=math.floor(rand * 365))
             ))
 
-        item_space = map(lambda s: s.item, evaluator.calc_score(datas))
+        item_space = [s.item for s in evaluator.calc_score(datas)]
         selected = datas[0]
         pattern = None
 
@@ -132,10 +131,10 @@ class EvaluationTestCase(unittest.TestCase):
 
             # update item space by criticize
 
-            item_space = filter(None, map(lambda item: item if pattern.is_fit_pattern(selected, item) else None, item_space))
+            item_space = list(filter(None, map(lambda item: item if pattern.is_fit_pattern(selected, item) else None, item_space)))
 
-            print "user selected item at {0}/{1}, and criticized by {2}. then, item'count became {3} to {4}.".format(
-                user_selected_at, length,  pattern.pattern, length, len(item_space))
+            print("user selected item at {0}/{1}, and criticized by {2}. then, item'count became {3} to {4}.".format(
+                user_selected_at, length,  pattern.pattern, length, len(item_space)))
 
             self.assertLess(len(item_space), length)
 

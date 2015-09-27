@@ -1,6 +1,7 @@
 import inspect
 import math
 from collections import Counter, defaultdict
+from functools import reduce
 
 
 def to_value(prop):
@@ -18,7 +19,7 @@ def to_vector(attr_name, item_list):
         else:
             return None
 
-    attr_vector = map(lambda el: attribute_to_value(el, attr_name), item_list)
+    attr_vector = [attribute_to_value(el, attr_name) for el in item_list]
     return attr_vector
 
 
@@ -28,7 +29,7 @@ def __make_text_cluster_key(token):
 
 def classify_text_tokens(text_tokens, cluster):
     v = []
-    arranged_tokens = map(__make_text_cluster_key, text_tokens)
+    arranged_tokens = [__make_text_cluster_key(t) for t in text_tokens]
     for c_i, c_t in enumerate(cluster):
         if c_t and c_t in arranged_tokens:
             v.append(1)
@@ -53,8 +54,8 @@ def make_text_clusters(list_of_text_tokens, cluster_count=-1):
     else:
         chosen_clusters = clusters.most_common(cluster_count)
 
-    cluster_tokens = map(lambda c: c[0], chosen_clusters)
-    classified_vector = map(lambda tokens: classify_text_tokens(tokens, cluster_tokens), list_of_text_tokens)
+    cluster_tokens = [c[0] for c in chosen_clusters]
+    classified_vector = [classify_text_tokens(t, cluster_tokens) for t in list_of_text_tokens]
 
     return cluster_tokens, classified_vector
 

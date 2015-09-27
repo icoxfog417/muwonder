@@ -1,11 +1,8 @@
-Django==1.6.5
 dj-database-url==0.3.0
 dj-static==0.0.6
-enum34==1.0
-fudge==1.0.3
-gunicorn==19.1.0
-psycopg2==2.5.3
-requests==2.3.0
-simplejson==3.6.0
-soundcloud==0.4.1
-static3==0.5.1
+Django==1.8.4
+gunicorn==19.3.0
+json-serializable==1.0.1
+psycopg2==2.6.1
+static3==0.6.1
+wheel==0.24.0

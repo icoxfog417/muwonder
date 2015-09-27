@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
-from __future__ import division
 import inspect
 import itertools
 import math
 import enum
 from collections import Counter
-import vector_utils
-from criticize_pattern import CriticizePattern
+from knowbre import vector_utils
+from knowbre.criticize_pattern import CriticizePattern
+from functools import reduce
 
 
 class EvaluationType(enum.Enum):
@@ -55,7 +55,7 @@ class ItemEvaluator(object):
         normalized = []
         without_none = [x for x in values if x is not None]
         if len(without_none) == 0:
-            return map(lambda nn: None, values)
+            return [None] * len(values)
 
         value_max = max(without_none)
         value_min = min(without_none)
@@ -64,15 +64,16 @@ class ItemEvaluator(object):
             value_range = 1
         value = vector_utils.to_value(prop)
 
+        eval = lambda v, c: None if v is None else c(v)
         if value:
-            normalized = map(lambda v: (v - value) / value_range if v is not None else None, values)
+            normalized = [eval(v, lambda x: (x - value) / value_range) for v in values]
         elif normalize_value_type == "max":
-            normalized = map(lambda v: (value_max - v) / value_range if v is not None else None, values)
+            normalized = [eval(v, lambda x: (value_max - x) / value_range) for v in values]
         elif normalize_value_type == "min":
-            normalized = map(lambda v: (v - value_min) / value_range if v is not None else None, values)
+            normalized = [eval(v, lambda x: (x - value_min) / value_range) for v in values]
         else:
             mean = reduce(lambda a, b: a + b, without_none) / len(without_none)
-            normalized = map(lambda v: (v - mean) / value_range if v is not None else None, values)
+            normalized = [eval(v, lambda x: (x - mean) / value_range) for v in values]
 
         return normalized
 
@@ -96,7 +97,7 @@ class ItemEvaluator(object):
             values = vector_utils.to_vector(attr_name, item_list)
             attr = getattr(selected_item, attr_name)
             normalized = cls.__normalize(values, prop=attr)
-            normalized = map(lambda v: 1 - abs(v) if v is not None else None, normalized)
+            normalized = [v if v is None else 1 - abs(v) for v in normalized]
             return normalized
         else:
             raise NotCalculatable("selected item's " + attr_name + " is None")
@@ -109,8 +110,8 @@ class ItemEvaluator(object):
 
             clusters, vectors = vector_utils.make_text_clusters(item_tokens)
             target_vector = vector_utils.classify_text_tokens(tokens, clusters)
-            distances = map(lambda v: vector_utils.calc_vector_distance(target_vector, v), vectors)
-            inv_distance = map(lambda d: 4 if d == 0 else 1 - math.log(d), distances)
+            distances = [vector_utils.calc_vector_distance(target_vector, v) for v in vectors]
+            inv_distance = [4 if d == 0 else 1 - math.log(d) for d in distances]
             # 4 is large enough in f(x) = 1-log(x)
 
             return cls.normalize(inv_distance)
@@ -122,7 +123,7 @@ class ItemEvaluator(object):
         attributes = inspect.getmembers(instance, lambda a: not(inspect.isroutine(a)))
         attributes.extend(inspect.getmembers(instance, lambda a: inspect.isfunction(a)))
         # exclude private attribute
-        return filter(lambda a: not(a[0].startswith("_")), attributes)
+        return list(filter(lambda a: not(a[0].startswith("_")), attributes))
 
     def calc_score(self, item_list, selected_item=None):
         """
@@ -134,7 +135,7 @@ class ItemEvaluator(object):
         attributes = self.__rules.keys()
 
         # initialize score vector by 0
-        score_vector = map(lambda item: EvaluateScore(item), item_list)
+        score_vector = [EvaluateScore(item) for item in item_list]
 
         for attr_name in attributes:
             if attr_name in self.__rules:
@@ -176,12 +177,13 @@ class ItemEvaluator(object):
         pt_counter = Counter()
 
         def judge_pattern(t_value, b_value):
-            if t_value > b_value:
-                return 1
-            elif t_value < b_value:
-                return -1
-            else:
-                return 0
+            _ptn = 0
+            if t_value and b_value:
+                if t_value > b_value:
+                    _ptn = 1
+                elif t_value < b_value:
+                    _ptn = -1
+            return _ptn
 
         for a in attributes:
             name = a
@@ -196,7 +198,7 @@ class ItemEvaluator(object):
             if length == 0:
                 length = len(item_list)
 
-            pt_judged.update({name: map(lambda a_v: judge_pattern(a_v, selected_value), attribute_values)})
+            pt_judged.update({name: [judge_pattern(a_v, selected_value) for a_v in attribute_values]})
 
         # make pattern
         for p_index in range(0, length):
@@ -204,8 +206,8 @@ class ItemEvaluator(object):
             for cnt in [1, 2]:
                 for combi in itertools.combinations(pt_keys, cnt):
                     ptn = ",".join(combi)
-                    p_ptn = "".join(map(lambda a_k: "X" if pt_judged[a_k][p_index] == 1 else "", combi))
-                    n_ptn = "".join(map(lambda a_k: "X" if pt_judged[a_k][p_index] == -1 else "", combi))
+                    p_ptn = "".join(["X" if pt_judged[a_k][p_index] == 1 else "" for a_k in combi])
+                    n_ptn = "".join(["X" if pt_judged[a_k][p_index] == -1 else "" for a_k in combi])
                     if len(p_ptn) == cnt:
                         pt_counter["+:" + ptn] += 1
                     if len(n_ptn) == cnt:
@@ -213,7 +215,7 @@ class ItemEvaluator(object):
 
         # order by support rate, and define pattern by at least two count
         patterns = filter(lambda p: p[1] > 1, pt_counter.items())
-        patterns = map(lambda item: self.pattern_type(item[0], item[1] / length), patterns)
+        patterns = [self.pattern_type(item[0], item[1] / length) for item in patterns]
         patterns = sorted(patterns, key=lambda p: p.score)
         return patterns
 

@@ -18,7 +18,7 @@ def print_title(test_case):
 class TrackTestCase(TestCase):
 
     def setUp(self):
-        self.tracks = Track().find({"q": u"the Hiatus", "created_at": {"from": "2014-01-01 00:00:00"}, "limit": 100})
+        self.tracks = Track().find({"q": "the Hiatus", "created_at": {"from": "2014-01-01 00:00:00"}, "limit": 100})
         self.tracks = sorted(self.tracks, key=lambda t: t.playback_count, reverse=True)
 
     @print_title
@@ -28,7 +28,7 @@ class TrackTestCase(TestCase):
 
         # by parameter
         criticize_type = TrackCriticizeType.Parameter
-        post_parameters = {u"bpm": u"123"}  # dummy bpm value
+        post_parameters = {"bpm": "123"}  # dummy bpm value
         parameters = pa.request_to_parameters(criticize_type, selected_track, post_parameters)
 
         print(map(lambda p: p.__str__(), parameters))
@@ -48,7 +48,7 @@ class TrackTestCase(TestCase):
         criticize_patterns = evaluator.make_pattern(self.tracks, selected_track)
 
         pattern = random.sample(criticize_patterns, 1)[0]
-        post_parameters = {u"pattern": pattern.pattern}
+        post_parameters = {"pattern": pattern.pattern}
         parameters = pa.request_to_parameters(criticize_type, selected_track, post_parameters)
 
         print(map(lambda p: p.__str__(), parameters))
@@ -73,4 +73,4 @@ class TrackTestCase(TestCase):
         for t in tracks:
             if foreach:
                 foreach(t)
-            print(u"{0}: genre({1}), genre_score({2}), created_at({3}). ".format(t.title, t.genre, t.genre_score(), t.created_at))
+            print("{0}: genre({1}), genre_score({2}), created_at({3}). ".format(t.title, t.genre, t.genre_score(), t.created_at))

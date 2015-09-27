@@ -2,9 +2,9 @@ import re
 import random
 from datetime import datetime, timedelta
 import math
-from knowbre import CriticizePattern, CriticizeDirection, vector_utils
+from knowbre import vector_utils, CriticizePattern, CriticizeDirection
 from soundcloudapi.models import Track, TrackCriticizeType
-from json_serialiable import JsonSerializable
+from json_serializable import JsonSerializable
 from collections import defaultdict
 
 
@@ -43,7 +43,7 @@ class Parameter(JsonSerializable):
             return default
 
     def __str__(self):
-        return u"{0}:{1}->{2}".format(self.direction, self.name, self.value)
+        return "{0}:{1}->{2}".format(self.direction, self.name, self.value)
 
 
 class ParameterAdapter(object):
@@ -105,7 +105,7 @@ class ParameterAdapter(object):
 
     @classmethod
     def is_none_or_empty(cls, value):
-        if value is None or value == "" or value == u"":
+        if value is None or value == "" or value == "":
             return True
         else:
             return False
@@ -209,9 +209,9 @@ class ParameterAdapter(object):
 
         random_score = random.uniform(-1, 1)
         random_genres = Track.score_to_genres(random_score, 1)
-        default_condition["genres"] = u",".join(random_genres)
+        default_condition["genres"] = ",".join(random_genres)
 
-        default_condition["filter"] = u"streamable"
+        default_condition["filter"] = "streamable"
 
         return default_condition
 

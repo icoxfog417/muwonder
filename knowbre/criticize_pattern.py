@@ -1,5 +1,5 @@
-import vector_utils
-from criticize_target import CriticizeDirection, CriticizeTarget
+from knowbre import vector_utils
+from knowbre.criticize_target import CriticizeDirection, CriticizeTarget
 
 
 class CriticizePattern(object):
@@ -16,8 +16,7 @@ class CriticizePattern(object):
         return direction
 
     def get_targets(self):
-        criticize = map(lambda token: CriticizeTarget(token.strip(), self.get_direction()),
-                        self.pattern.split(":")[1].split(","))
+        criticize = [CriticizeTarget(token.strip(), self.get_direction()) for token in self.pattern.split(":")[1].split(",")]
         return criticize
 
     def is_fit_pattern(self, base_item, target_item):
@@ -28,12 +27,14 @@ class CriticizePattern(object):
         for p in self.get_targets():
             base_value = vector_utils.to_value(getattr(base_item, p.name))
             target_value = vector_utils.to_value(getattr(target_item, p.name))
-            if target_value > base_value:
-                is_fit.append(1)
-            elif target_value < base_value:
-                is_fit.append(-1)
-            else:
-                is_fit.append(0)
+            v = 0
+            if target_value and base_value:
+                if target_value > base_value:
+                    v = 1
+                elif target_value < base_value:
+                    v = -1
+
+            is_fit.append(v)
 
         if self.get_direction() == CriticizeDirection.Up and sum(is_fit) == len(is_fit):
             # pattern is positive, and exactly all pattern is True
@@ -56,14 +57,14 @@ class CriticizePattern(object):
         :return:
         """
 
-        text = u"Do you like "
+        text = "Do you like "
         if self.is_positive():
-            text += u"more "
+            text += "more "
         else:
-            text += u"less "
+            text += "less "
 
-        text += u" and ".join(map(lambda p: unicode(p.name.replace("_", " ")), self.get_targets()))
-        text += u"?"
+        text += " and ".join(map(lambda p: p.name.replace("_", " "), self.get_targets()))
+        text += "?"
 
         return text
 

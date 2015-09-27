@@ -1,5 +1,5 @@
 import enum
-from knowbre import CriticizePattern, vector_utils
+from knowbre import CriticizePattern
 from soundcloudapi.models import Track
 
 
@@ -45,7 +45,7 @@ class TrackCriticizePattern(CriticizePattern):
 
     def make_question(self, track, tracks):
         cr_targets = map(lambda ct: ct.name, self.get_targets())
-        attr_for_pupular = [u"comment_count", u"download_count", u"playback_count", u"favoritings_count"]
+        attr_for_pupular = ["comment_count", "download_count", "playback_count", "favoritings_count"]
         result = []
 
         def has_popular_attr():
@@ -56,27 +56,27 @@ class TrackCriticizePattern(CriticizePattern):
         # target_vector = vector_utils.classify_text_tokens(track.tag_tokens(), clusters)
 
         if has_popular_attr():
-            result.append({"pattern": self.pattern, "type": u"Popularity", "is_up": self.is_positive()})
+            result.append({"pattern": self.pattern, "type": "Popularity", "is_up": self.is_positive()})
 
-        if u"elapsed" in cr_targets:
-            result.append({"pattern": self.pattern, "type": u"Created at", "is_up": self.is_positive()})
+        if "elapsed" in cr_targets:
+            result.append({"pattern": self.pattern, "type": "Created at", "is_up": self.is_positive()})
 
         """
-        if u"bpm" in cr_targets:
+        if "bpm" in cr_targets:
             if self.is_positive():
-                words.append(u"fast")
+                words.append("fast")
             else:
-                words.append(u"slow")
+                words.append("slow")
         """
 
-        if u"genre_score" in cr_targets:
+        if "genre_score" in cr_targets:
             genre = Track.score_to_genre(track.genre_score())
-            result.append({"pattern": self.pattern, "type": u"Vibration", "is_up": self.is_positive()})
-        elif u"genre" in cr_targets:
-            result.append({"pattern": self.pattern, "type": u"Vibration", "is_up": self.is_positive()})
+            result.append({"pattern": self.pattern, "type": "Vibration", "is_up": self.is_positive()})
+        elif "genre" in cr_targets:
+            result.append({"pattern": self.pattern, "type": "Vibration", "is_up": self.is_positive()})
 
         """
-        if u"tag_tokens" in cr_targets:
+        if "tag_tokens" in cr_targets:
             target_clusters = target_vector if self.is_positive() else map(lambda t: 1 if t == 0 else 0, target_vector)
             next_clusters = vector_utils.get_item_in_vector(clusters, target_clusters)
             if len(next_clusters) > 0:

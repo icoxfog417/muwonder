@@ -19,5 +19,4 @@ venv
 *.iml
 *.iws
 
-secret_settings.py
-design_memo.txt
+local_envs.json

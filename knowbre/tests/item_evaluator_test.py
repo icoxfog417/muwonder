@@ -1,7 +1,6 @@
-from __future__ import division
 import unittest
-from datetime import datetime
 from math import pow
+from datetime import datetime
 import knowbre.vector_utils as vector_manager
 from knowbre.item_evaluator import ItemEvaluator, NotCalculatable
 
@@ -50,7 +49,7 @@ class EvaluateFunctionTestCase(unittest.TestCase):
         item = EvaluateItem()
         attributes = ItemEvaluator.get_attributes(item)
         for a in attributes:
-            print a
+            print(a)
         self.assertEquals(5, len(attributes))  # 4 is the number of attribute except private.
 
     @print_title
@@ -68,7 +67,7 @@ class EvaluateFunctionTestCase(unittest.TestCase):
         self.assertEquals(len(obj_list), len(attributes))
         for index, value in enumerate(attributes):
             if is_print:
-                print value
+                print(value)
             self.assertEquals(vector_manager.to_value(getattr(obj_list[index], target_attribute)), value)
 
     @print_title
@@ -77,7 +76,7 @@ class EvaluateFunctionTestCase(unittest.TestCase):
         mean = 5.87
         max_value = max(filter(None, data))
         min_value = min(filter(None, data))
-        calc_result = map(lambda v: float(v - mean) / (max_value - min_value), filter(None, data))
+        calc_result = [float(v - mean) / (max_value - min_value) for v in data if v]
 
         calc_returned = ItemEvaluator.normalize(data)
 
@@ -91,7 +90,7 @@ class EvaluateFunctionTestCase(unittest.TestCase):
         values = vector_manager.to_vector("reviews", data)
         max_value = max(filter(None, values))
         min_value = min(filter(None, values))
-        calc_result = map(lambda v: (v - min_value) / (max_value - min_value), filter(None, values))
+        calc_result = [(v - min_value) / (max_value - min_value) for v in values if v]
 
         calc_returned = ItemEvaluator.calc_more_is_better("reviews", data)
 
@@ -107,7 +106,7 @@ class EvaluateFunctionTestCase(unittest.TestCase):
         max_value = max(filter(None, values))
         min_value = min(filter(None, values))
 
-        calc_result = map(lambda v: (max_value - v) / (max_value - min_value), filter(None, values))
+        calc_result = [(max_value - v) / (max_value - min_value) for v in values if v]
 
         calc_returned = ItemEvaluator.calc_less_is_better("elapsed", data)
 
@@ -123,7 +122,7 @@ class EvaluateFunctionTestCase(unittest.TestCase):
         max_value = max(filter(None, values))
         min_value = min(filter(None, values))
         selected = EvaluateItem().set_params(100, 10, datetime(2010, 4, 1, 0, 0))
-        calc_result = map(lambda v: 1 - abs(v - selected.bpm) / (max_value - min_value), filter(None, values))
+        calc_result = [1 - abs(v - selected.bpm) / (max_value - min_value) for v in values if v]
 
         calc_returned = ItemEvaluator.calc_near_is_better("bpm", data, selected)
 
@@ -134,7 +133,7 @@ class EvaluateFunctionTestCase(unittest.TestCase):
     @print_title
     def test_calc_text_token_distance(self):
         item_count = 5
-        test_items = map(lambda x: EvaluateItem(), range(item_count))
+        test_items = [EvaluateItem()] * item_count
 
         for i in range(item_count):
             if i == 0:

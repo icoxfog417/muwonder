@@ -1,7 +1,7 @@
-import soundcloud_client
-from knowbre.item_evaluator import ItemEvaluator, EvaluationType
-from json_serialiable import JsonSerializable
-from soundcloud_resource import SoundCloudResource
+from json_serializable import JsonSerializable
+from soundcloudapi.service import soundcloud_client
+from knowbre import ItemEvaluator, EvaluationType
+from soundcloudapi.models import SoundCloudResource
 
 
 class User(JsonSerializable):
@@ -11,11 +11,11 @@ class User(JsonSerializable):
         create __client by secret client key to access soundcloud
         """
         super(User, self).__init__()
-        self.id = u""
-        self.username = u""
-        self.permalink_url = u""
-        self.country = u""
-        self.full_name = u""
+        self.id = ""
+        self.username = ""
+        self.permalink_url = ""
+        self.country = ""
+        self.full_name = ""
         self.track_count = 0
         self.playlist_count = 0
         self.followers_count = 0

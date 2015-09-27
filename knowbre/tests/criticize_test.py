@@ -1,6 +1,6 @@
-from knowbre import CriticizeTarget, CriticizePattern, CriticizeDirection
-from item_evaluator_test import print_title
 import unittest
+from knowbre.criticize_pattern import CriticizePattern
+from knowbre.tests.item_evaluator_test import print_title
 
 
 class CriticizeTestCase(unittest.TestCase):
