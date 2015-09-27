@@ -73,16 +73,16 @@ class Track(JsonSerializable):
 
     @classmethod
     def tag_list_to_tokens(cls, tag_list):
-        p = re.compile(u'".+?"')
+        p = re.compile('".+?"')
         double_quoted = p.findall(tag_list)
         exclude_double_quoted = tag_list
         for dq in double_quoted:
             exclude_double_quoted = exclude_double_quoted.replace(dq, "")
 
         tokens = exclude_double_quoted.split()
-        tokens = filter(None, map(lambda t: t.strip(), tokens))
+        tokens = [t.strip() for t in tokens if t]
         if len(double_quoted) > 0:
-            tokens += map(lambda t: t.replace(u'"', ""), double_quoted)
+            tokens += [t.replace('"', "") for t in double_quoted]
 
         return tokens
 
@@ -119,7 +119,7 @@ class Track(JsonSerializable):
         else:
             tracks = self.__client.get("/tracks", {})
 
-        track_items = map(lambda t: Track(SoundCloudResource(t)), tracks)
+        track_items = [Track(SoundCloudResource(t)) for t in tracks]
         return track_items
 
     @classmethod
@@ -138,7 +138,7 @@ class Track(JsonSerializable):
 
         users = self.__client.get("/tracks/{0}/favoriters".format(self.id))
         from .user import User
-        user_items = map(lambda u: User(SoundCloudResource(u)), users)
+        user_items = [User(SoundCloudResource(u)) for u in users]
         return user_items
 
     @classmethod
@@ -164,11 +164,11 @@ class Track(JsonSerializable):
                 if word in genres:
                     s = genres[w]
                 else:
-                    hits = filter(lambda g: g.find(word) > -1, genres)
+                    hits = list(filter(lambda g: g.find(word) > -1, genres))
                     if len(hits) > 0:
                         s = genres[hits[0]]
 
-                    rev_hits = filter(lambda g: word.find(g) > -1, genres)
+                    rev_hits = list(filter(lambda g: word.find(g) > -1, genres))
                     if len(rev_hits) > 0:
                         s = genres[rev_hits[0]]
             return s

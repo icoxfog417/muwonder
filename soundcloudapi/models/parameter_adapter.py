@@ -17,7 +17,7 @@ class Parameter(JsonSerializable):
         self.direction = direction
 
         def convert_if_dateformat(type, attr_value):
-            if isinstance(attr_value, str) or isinstance(attr_value, unicode):
+            if isinstance(attr_value, str):
                 m = re.search("\d{4}/\d{1,2}/\d{1,2}\s\d{1,2}\:\d{1,2}\:\d{1,2}", attr_value)
                 if m is not None:
                     return datetime.strptime(attr_value, "%Y/%m/%d %H:%M:%S")
@@ -26,12 +26,11 @@ class Parameter(JsonSerializable):
             else:
                 return attr_value
 
-        self.set_deserialize_rule({unicode: convert_if_dateformat})
-        self.set_deserialize_rule({str: convert_if_dateformat})
+        self.set_deserialize_rule(str, convert_if_dateformat)
 
     @classmethod
     def find(cls, name, parameter_array):
-        items = filter(lambda p: p.name == name, parameter_array)
+        items = list(filter(lambda p: p.name == name, parameter_array))
         return items
 
     @classmethod
@@ -83,7 +82,7 @@ class ParameterAdapter(object):
         return self.request_to_parameters(TrackCriticizeType.Like, track, {})
 
     def filter_by_parameters(self, parameters, base_track, target_track):
-        pattern = filter(lambda p: p.name == "pattern", parameters)
+        pattern = list(filter(lambda p: p.name == "pattern", parameters))
         if len(pattern) > 0:
             cp = CriticizePattern(pattern[0].value)
             return cp.is_fit_pattern(base_track, target_track)
@@ -246,10 +245,11 @@ class ParameterAdapter(object):
                     result = datetime.now() - timedelta(days=365)
 
         if parameter_name in ["playback_count", "favoritings_count"]:
-            if is_up:
-                result = math.exp(math.log(value) * 1.2)
-            else:
-                result = math.exp(math.log(value) * 0.8)
+            if value > 0:
+                if is_up:
+                    result = math.exp(math.log(value) * 1.2)
+                else:
+                    result = math.exp(math.log(value) * 0.8)
 
         return result
 

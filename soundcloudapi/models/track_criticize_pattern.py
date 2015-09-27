@@ -16,7 +16,7 @@ class TrackCriticizePattern(CriticizePattern):
 
     @classmethod
     def patterns_to_questions(cls, patterns, track, tracks):
-        questions = map(lambda c: c.make_question(track, tracks), patterns)
+        questions = [c.make_question(track, tracks) for c in patterns]
 
         def pattern_type(is_up):
             return "up_pattern" if is_up else "down_pattern"
@@ -44,12 +44,12 @@ class TrackCriticizePattern(CriticizePattern):
         return merged_array
 
     def make_question(self, track, tracks):
-        cr_targets = map(lambda ct: ct.name, self.get_targets())
+        cr_targets = [ct.name for ct in self.get_targets()]
         attr_for_pupular = ["comment_count", "download_count", "playback_count", "favoritings_count"]
         result = []
 
         def has_popular_attr():
-            matches = map(lambda t: 1 if t in cr_targets else 0, attr_for_pupular)
+            matches = [1 if t in cr_targets else 0 for t in attr_for_pupular]
             return sum(matches) > 0
 
         # clusters, vectors = vector_utils.make_text_clusters(map(lambda t: t.tag_tokens(), tracks))

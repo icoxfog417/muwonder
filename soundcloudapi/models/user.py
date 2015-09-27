@@ -53,6 +53,6 @@ class User(JsonSerializable):
 
     def get_favorites(self):
         tracks = self.__client.get("/users/{0}/favorites".format(self.id))
-        from .track import Track
-        track_items = map(lambda t: Track(SoundCloudResource(t)), tracks)
+        from soundcloudapi.models import Track
+        track_items = [Track(SoundCloudResource(t)) for t in tracks]
         return track_items
