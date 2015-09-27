@@ -27,9 +27,9 @@ class RecommendApi(object):
         # get request parameters
         request_body = None
         if request.method == "GET":
-            request_body = request.GET.dict().keys()[0]
+            request_body = list(request.GET.dict().keys())[0]
         else:
-            request_body = request.body
+            request_body = request.body.decode("utf-8")
 
         posted = json.loads(request_body)
         posted_parameters = {} if not "parameters" in posted else posted["parameters"]
@@ -164,7 +164,7 @@ class RecommendApi(object):
     @classmethod
     def get_criticize_pattern(cls, request):
         if request.method == "POST":
-            posted = json.loads(request.body)
+            posted = json.loads(request.body.decode("utf-8"))
             track_id = posted["track_id"]
 
             tracks = cls.__get_session_tracks(request)
@@ -274,7 +274,7 @@ def make_playlist(request):
         token = SessionManager.get_session(request, SessionManager.SOUNDCLOUD_ACCESS_TOKEN)
         client = soundcloud_client.create_by_token(token)
 
-        posted = json.loads(request.body)
+        posted = json.loads(request.body.decode("utf-8"))
         title = posted.get("title")
         sharing = posted.get("sharing")
         liked = posted.get("liked")

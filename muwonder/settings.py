@@ -19,7 +19,7 @@ BASE_DIR = os.path.dirname(os.path.dirname(__file__))
 # SECURITY WARNING: keep the secret key used in production secret!
 from envs import Variable
 V = Variable()
-SECRET_KEY = V.secret_key
+SECRET_KEY = V.secret_token
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True

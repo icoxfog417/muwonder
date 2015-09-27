@@ -1,0 +1,28 @@
+{
+  "name": "muwonder",
+  "description": "explorer music by your feel and beat!.",
+  "keywords": [
+    "music",
+    "soundcloud"
+  ],
+  "website": "http://muwonder.herokuapp.com/",
+  "repository": "https://github.com/tech-sketch/muwonder",
+  "scripts": {
+    "postdeploy": "python manage.py migrate"
+  },
+  "env": {
+    "SECRET_TOKEN": {
+      "description": "A secret key for verifying the integrity of signed cookies.",
+      "generator": "secret"
+    },
+    "SOUND_CLOUD_ID": {
+      "description": "soundcloud api id."
+    },
+    "SOUND_CLOUD_SECRET": {
+      "description": "soundcloud api secret."
+    }
+  },
+  "addons": [
+    "heroku-postgresql"
+  ]
+}

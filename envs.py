@@ -11,7 +11,7 @@ class Variable():
                 local = json.load(f)
 
         get_env = lambda k, d="__DEFAULT_SETTING__": os.environ.get(k, d if k not in local else local[k])
-        self.secret_key = get_env("SECRET_KEY")
+        self.secret_token = get_env("SECRET_TOKEN")
         self.soundcloud_id = get_env("SOUND_CLOUD_ID")
         self.soundcloud_secret = get_env("SOUND_CLOUD_SECRET")
         self.http_proxy = get_env("HTTP_PROXY", "")
